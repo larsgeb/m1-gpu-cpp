@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# Metal
+*.metallib
+*.air
+*.x
+*.dSYM
+.DS_Store
