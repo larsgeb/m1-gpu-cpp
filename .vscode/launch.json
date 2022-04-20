@@ -1,12 +1,12 @@
 {
     "configurations": [{
-        "name": "C/C++: clang++ (LLVM) + OpenMP + Metal build and debug active file",
+        "name": "MetalAdder benchmark debugging",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/benchmark.x",
+        "program": "${workspaceFolder}/01-MetalAdder/benchmark.x",
         "args": [],
         "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
+        "cwd": "${workspaceFolder}/01-MetalAdder",
         "environment": [],
         "externalConsole": false,
         "MIMode": "lldb",

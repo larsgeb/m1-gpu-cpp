@@ -14,9 +14,9 @@
 				"-I${workspaceFolder}/metal-cpp", "-fno-objc-arc",
 				"-framework", "Metal", "-framework", "Foundation", "-framework", "MetalKit",
 				"-g",
-				"${workspaceFolder}/main.cpp", "${workspaceFolder}/MetalAdder.cpp",
+				"${workspaceFolder}/01-MetalAdder/main.cpp", "${workspaceFolder}/01-MetalAdder/MetalAdder.cpp",
 				"-o",
-				"${workspaceFolder}/benchmark.x"
+				"${workspaceFolder}/01-MetalAdder/benchmark.x"
 			],
 			"options": {
 				"cwd": "${fileDirname}"
@@ -38,16 +38,16 @@
 			"command": "xcrun",
 			"args": [
 				"-sdk", "macosx", "metal",
-				"-c", "add.metal",
-				"-o", "library.air"
+				"-c", "${workspaceFolder}/01-MetalAdder/add.metal",
+				"-o", "${workspaceFolder}/01-MetalAdder/library.air"
 			]
 		}, {
 			"type": "shell",
 			"label": "Build .metallib",
 			"command": "xcrun",
 			"args": [
-				"-sdk", "macosx", "metallib", "library.air",
-				"-o", "default.metallib"
+				"-sdk", "macosx", "metallib", "${workspaceFolder}/01-MetalAdder/library.air",
+				"-o", "${workspaceFolder}/01-MetalAdder/default.metallib"
 			],
 			"dependsOn": ["Build .air"]
 

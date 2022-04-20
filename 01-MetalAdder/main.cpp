@@ -1,5 +1,5 @@
 // Lars Gebraad, 20th of April, 2022
-// 
+//
 
 #include <iostream>
 #include <omp.h>
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     adder->verifyResults();
 
     // Profile Metal code --------------------------------------------------------------
-    int repeats = 1000;
+    int repeats = 100;
     auto durations = new float[repeats];
     for (size_t repeat = 0; repeat < repeats; repeat++)
     {
