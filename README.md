@@ -309,16 +309,16 @@ Now, to actually compile our Metal+OpenMP application, we run:
 larsgebraad@macbook:~$ /opt/homebrew/opt/llvm/bin/clang++ \
     -std=c++17 -stdlib=libc++ -O2 \
     -L/opt/homebrew/opt/libomp/lib -fopenmp \
-    -I./metal-cpp -I./metal-cpp-extensions \
+    -I./metal-cpp \
     -fno-objc-arc \
     -framework Metal -framework Foundation -framework MetalKit \
-    -g main.cpp MetalAdder.cpp  -o benchmark.x
+    -g 01-MetalAdder/main.cpp 01-MetalAdder/MetalAdder.cpp  -o 01-MetalAdder/benchmark.x
 ```
 
 If one were to try out this executable, we'd find the following:
 
 ```console
-larsgebraad@macbook:~$ ./benchmark.x
+larsgebraad@macbook:~$ ./01-MetalAdder/benchmark.x
 
 Failed to find the default library.
 [1]    13767 segmentation fault  ./benchmark.x
@@ -349,7 +349,7 @@ Now that our GPU code is compiled, we are ready to run a full benchmark. In `mai
 > - 32 GB RAM
 
 ```console
-larsgebraad@macbook:~$ ./benchmark.x
+larsgebraad@macbook:~$ ./01-MetalAdder/benchmark.x
 
 Metal (GPU) code performance: 
 Average time: 803.566ms +/- 48.427ms
