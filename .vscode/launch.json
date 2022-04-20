@@ -1,0 +1,15 @@
+{
+    "configurations": [{
+        "name": "C/C++: clang++ (LLVM) + OpenMP + Metal build and debug active file",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/benchmark.x",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb",
+        "preLaunchTask": "C/C++: clang++ (LLVM) build active file with OpenMP and Metal"
+    }]
+}

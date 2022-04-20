@@ -1,0 +1,56 @@
+{
+	"version": "2.0.0",
+	"tasks": [{
+			"type": "cppbuild",
+			"label": "C/C++: clang++ (LLVM) build active file with OpenMP and Metal",
+			"command": "/opt/homebrew/opt/llvm/bin/clang++",
+			"args": [
+				"-std=c++17",
+				"-stdlib=libc++",
+				"-O2",
+				// OpenMP includes & configuration
+				"-L/opt/homebrew/opt/libomp/lib", "-fopenmp",
+				// Metal includes & configuration
+				"-I${workspaceFolder}/metal-cpp", "-fno-objc-arc",
+				"-framework", "Metal", "-framework", "Foundation", "-framework", "MetalKit",
+				"-g",
+				"${workspaceFolder}/main.cpp", "${workspaceFolder}/MetalAdder.cpp",
+				"-o",
+				"${workspaceFolder}/benchmark.x"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "compiler: /opt/homebrew/opt/llvm/bin/clang++",
+			"dependsOn": ["Build .metallib"],
+		},
+		// See: https://developer.apple.com/documentation/metal/shader_libraries/building_a_library_with_metal_s_command-line_tools?language=objc
+		{
+			"type": "shell",
+			"label": "Build .air",
+			"command": "xcrun",
+			"args": [
+				"-sdk", "macosx", "metal",
+				"-c", "add.metal",
+				"-o", "library.air"
+			]
+		}, {
+			"type": "shell",
+			"label": "Build .metallib",
+			"command": "xcrun",
+			"args": [
+				"-sdk", "macosx", "metallib", "library.air",
+				"-o", "default.metallib"
+			],
+			"dependsOn": ["Build .air"]
+
+		},
+	]
+}
