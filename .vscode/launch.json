@@ -10,6 +10,18 @@
         "environment": [],
         "externalConsole": false,
         "MIMode": "lldb",
-        "preLaunchTask": "C/C++: clang++ (LLVM) build active file with OpenMP and Metal"
+        "preLaunchTask": "Build 01"
+    }, {
+        "name": "MetalOperations debugging",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/02-GeneralArrayOperations/benchmark.x",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/02-GeneralArrayOperations",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb",
+        "preLaunchTask": "Build 02"
     }]
 }
