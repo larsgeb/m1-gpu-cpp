@@ -1,17 +1,5 @@
 {
     "configurations": [{
-        "name": "Mac M1",
-        "includePath": [
-            "${workspaceFolder}/**"
-        ],
-        "defines": [],
-        "macFrameworkPath": [],
-        "compilerPath": "/usr/bin/clang++",
-        "cStandard": "c17",
-        "cppStandard": "c++20",
-        "intelliSenseMode": "clang-x64",
-        "compilerArgs": []
-    }, {
         "name": "Mac M1 LLVM OpenMP",
         "includePath": [
             "${workspaceFolder}/**",
