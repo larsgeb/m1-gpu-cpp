@@ -43,17 +43,4 @@ private:
 
     // The command queue used to pass commands to the device.
     MTL::CommandQueue *_mCommandQueue;
-
-    void performOperationBlocking(MTL::ComputePipelineState *OperationPipeline,
-                                  const MTL::Buffer *array_a,
-                                  const MTL::Buffer *array_b,
-                                  MTL::Buffer *array_c,
-                                  size_t arrayLength);
-
-    void encodeCommand(MTL::ComputeCommandEncoder *computeEncoder,
-                       MTL::ComputePipelineState *FunctionPSO,
-                       const MTL::Buffer *array_a,
-                       const MTL::Buffer *array_b,
-                       MTL::Buffer *array_c,
-                       size_t arrayLength);
 };
