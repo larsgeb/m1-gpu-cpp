@@ -2,6 +2,8 @@
 
 #include "MetalOperations.hpp"
 #include <iostream>
+#include <list>
+#include <map>
 
 MetalOperations::MetalOperations(MTL::Device *device)
 {
@@ -11,54 +13,56 @@ MetalOperations::MetalOperations(MTL::Device *device)
     NS::Error *error = nullptr;
 
     // Load the shader files with a .metal file extension in the project
-    MTL::Library *defaultLibrary = _mDevice->newDefaultLibrary();
+    auto filepath = NS::String::string("./ops.metallib", NS::ASCIIStringEncoding);
+    MTL::Library *opLibrary = _mDevice->newLibrary(filepath, &error);
 
-    if (defaultLibrary == nullptr)
+    if (opLibrary == nullptr)
     {
-        std::cout << "Failed to find the default library." << std::endl;
+        std::cout << "Failed to find the default library. Error: "
+                  << error->description()->utf8String() << std::endl;
         return;
     }
 
-    auto str = NS::String::string("add_arrays", NS::ASCIIStringEncoding);
-    MTL::Function *addFunction = defaultLibrary->newFunction(str);
+    // Get all function names
+    auto fnNames = opLibrary->functionNames();
 
-    str = NS::String::string("multiply_arrays", NS::ASCIIStringEncoding);
-    MTL::Function *multiplyFunction = defaultLibrary->newFunction(str);
+    std::cout << "Available Metal functions in 'ops.metallib':" << std::endl;
 
-    str = NS::String::string("saxpy", NS::ASCIIStringEncoding);
-    MTL::Function *saxpyFunction = defaultLibrary->newFunction(str);
+    // MTL::Function *fnList[fnNames->count()];
 
-    if (addFunction == nullptr)
+    std::map<std::string, MTL::Function *> functionMap;
+    std::map<std::string, MTL::ComputePipelineState *> functionPipelineMap;
+
+    for (size_t i = 0; i < fnNames->count(); i++)
     {
-        std::cout << "Failed to find the adder function." << std::endl;
-        return;
-    }
-    if (multiplyFunction == nullptr)
-    {
-        std::cout << "Failed to find the multiply function." << std::endl;
-        return;
-    }
-    if (saxpyFunction == nullptr)
-    {
-        std::cout << "Failed to find the saxpy function." << std::endl;
-        return;
+
+        auto name_utf8 = fnNames->object(i)->description()->utf8String();
+
+        // Output function to stdout
+        std::cout << name_utf8 << std::endl;
+
+        // Load function into a map
+        functionMap[name_utf8] =
+            (opLibrary->newFunction(fnNames->object(i)->description()));
+
+        // Create pipeline from function
+        functionPipelineMap[name_utf8] =
+            _mDevice->newComputePipelineState(functionMap[name_utf8], &error);
+
+        if (functionPipelineMap[name_utf8] == nullptr)
+        {
+            std::cout << "Failed to created pipeline state object for "
+                      << name_utf8 << ", error "
+                      << error->description()->utf8String() << std::endl;
+            return;
+        }
     }
 
-    // Create a compute pipelines
-    _mAddFunctionPSO = _mDevice->newComputePipelineState(addFunction, &error);
-    _mMultiplyFunctionPSO = _mDevice->newComputePipelineState(multiplyFunction, &error);
-    _mSaxpyFunctionPSO = _mDevice->newComputePipelineState(saxpyFunction, &error);
+    std::cout << std::endl;
 
-    if (_mAddFunctionPSO == nullptr)
-    {
-        std::cout << "Failed to created pipeline state object, error " << error << "." << std::endl;
-        return;
-    }
-    if (_mMultiplyFunctionPSO == nullptr)
-    {
-        std::cout << "Failed to created pipeline state object, error " << error << "." << std::endl;
-        return;
-    }
+    _mAddFunctionPSO = functionPipelineMap["add_arrays"];
+    _mMultiplyFunctionPSO = functionPipelineMap["multiply_arrays"];
+    _mSaxpyFunctionPSO = functionPipelineMap["saxpy"];
 
     _mCommandQueue = _mDevice->newCommandQueue();
     if (_mCommandQueue == nullptr)

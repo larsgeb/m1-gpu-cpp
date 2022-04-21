@@ -88,15 +88,15 @@
 			"args": [
 				"-sdk", "macosx", "metal",
 				"-c", "${workspaceFolder}/02-GeneralArrayOperations/ops.metal",
-				"-o", "${workspaceFolder}/02-GeneralArrayOperations/library.air"
+				"-o", "${workspaceFolder}/02-GeneralArrayOperations/ops.air"
 			]
 		}, {
 			"type": "shell",
 			"label": "Build .metallib 02",
 			"command": "xcrun",
 			"args": [
-				"-sdk", "macosx", "metallib", "${workspaceFolder}/02-GeneralArrayOperations/library.air",
-				"-o", "${workspaceFolder}/02-GeneralArrayOperations/default.metallib"
+				"-sdk", "macosx", "metallib", "${workspaceFolder}/02-GeneralArrayOperations/ops.air",
+				"-o", "${workspaceFolder}/02-GeneralArrayOperations/ops.metallib"
 			],
 			"dependsOn": ["Build .air 02"]
 
