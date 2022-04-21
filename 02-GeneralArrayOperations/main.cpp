@@ -13,7 +13,7 @@
 
 #include "MetalOperations.hpp"
 
-const unsigned int arrayLength = 1 << 26;
+const unsigned int arrayLength = 1 << 24;
 const unsigned int bufferSize = arrayLength * sizeof(float);
 void generateRandomFloatData(float *dataPtr, size_t arrayLength);
 
@@ -32,55 +32,60 @@ int omp_thread_count();
 int main(int argc, char *argv[])
 {
 
+    // Set up objects and buffers ------------------------------------------------------
+
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
 
     std::cout << "Running on " << device->name()->utf8String() << std::endl
               << std::endl;
 
-    // Buffers to hold data.
-    MTL::Buffer *m_array_b = device->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
-    MTL::Buffer *m_array_a = device->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
-    MTL::Buffer *m_array_c = device->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
+    // MTL buffers to hold data.
+    // device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged)
+    MTL::Buffer *a_MTL = device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged);
+    MTL::Buffer *b_MTL = device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged);
+    MTL::Buffer *c_MTL = device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged);
+    MTL::Buffer *k_MTL = device->newBuffer(sizeof(float), MTL::ResourceStorageModeManaged); // Scalar
 
-    auto c_array_a = ((float *)m_array_a->contents());
-    auto c_array_b = ((float *)m_array_b->contents());
-    auto c_array_c = ((float *)m_array_c->contents());
+    // Get a C++-style reference to the buffer
+    auto a_CPP = (float *)a_MTL->contents();
+    auto b_CPP = (float *)b_MTL->contents();
+    auto c_CPP = (float *)c_MTL->contents();
+    auto k_CPP = (float *)k_MTL->contents();
 
-    auto verification = new float[arrayLength];
+    // Array to store CPU result on for verification of kernels
+    auto c_VER = new float[arrayLength];
 
-    generateRandomFloatData(c_array_a, arrayLength);
-    generateRandomFloatData(c_array_b, arrayLength);
+    generateRandomFloatData(a_CPP, arrayLength);
+    generateRandomFloatData(b_CPP, arrayLength);
+    *k_CPP = 904.89547f;
 
     // Create GPU object
     MetalOperations *arrayOps = new MetalOperations(device);
 
-    // Run Metal operation
-    arrayOps->addArrays(m_array_a, m_array_b, m_array_c, arrayLength);
-    add(c_array_a, c_array_b, verification, arrayLength);
-    if (equalArray(c_array_c, verification, arrayLength))
+    // Verify general array operations -------------------------------------------------
+    arrayOps->addArrays(a_MTL, b_MTL, c_MTL, arrayLength);
+    add(a_CPP, b_CPP, c_VER, arrayLength);
+    if (equalArray(c_CPP, c_VER, arrayLength))
     {
         std::cout << "Add arrays works fine" << std::endl;
     }
 
-    arrayOps->multiplyArrays(m_array_a, m_array_b, m_array_c, arrayLength);
-    multiply(c_array_a, c_array_b, verification, arrayLength);
-    if (equalArray(c_array_c, verification, arrayLength))
+    arrayOps->multiplyArrays(a_MTL, b_MTL, c_MTL, arrayLength);
+    multiply(a_CPP, b_CPP, c_VER, arrayLength);
+    if (equalArray(c_CPP, c_VER, arrayLength))
     {
         std::cout << "Multiply arrays works fine" << std::endl;
     }
 
-    auto _alpha = device->newBuffer(sizeof(float), MTL::ResourceStorageModeShared);
-    *(float *)_alpha->contents() = 4234.0;
-
-    arrayOps->saxpyArrays(_alpha, m_array_a, m_array_b, m_array_c, arrayLength);
-    saxpy((float *)_alpha->contents(), c_array_a, c_array_b, verification, arrayLength);
-    if (equalArray(c_array_c, verification, arrayLength))
+    arrayOps->saxpyArrays(k_MTL, a_MTL, b_MTL, c_MTL, arrayLength);
+    saxpy(k_CPP, a_CPP, b_CPP, c_VER, arrayLength);
+    if (equalArray(c_CPP, c_VER, arrayLength))
     {
         std::cout << "SAXPY works fine" << std::endl
                   << std::endl;
     }
 
-    std::cout << "Starting SAXPY benchmarking" << std::endl;
+    std::cout << "Starting SAXPY benchmarking ..." << std::endl;
 
     size_t repeats = 1000;
     float *durations = new float[repeats];
@@ -90,7 +95,7 @@ int main(int argc, char *argv[])
     for (size_t repeat = 0; repeat < repeats; repeat++)
     {
         auto start = std::chrono::high_resolution_clock::now();
-        arrayOps->saxpyArrays(_alpha, m_array_a, m_array_b, m_array_c, arrayLength);
+        arrayOps->saxpyArrays(k_MTL, a_MTL, b_MTL, c_MTL, arrayLength);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = (stop - start).count();
         durations[repeat] = duration;
@@ -103,7 +108,7 @@ int main(int argc, char *argv[])
     for (size_t repeat = 0; repeat < repeats; repeat++)
     {
         auto start = std::chrono::high_resolution_clock::now();
-        saxpy((float *)_alpha->contents(), c_array_a, c_array_b, verification, arrayLength);
+        saxpy(k_CPP, a_CPP, b_CPP, c_VER, arrayLength);
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = (stop - start).count();
         durations[repeat] = duration;
@@ -119,7 +124,7 @@ int main(int argc, char *argv[])
         for (size_t repeat = 0; repeat < repeats; repeat++)
         {
             auto start = std::chrono::high_resolution_clock::now();
-            saxpy_openmp((float *)_alpha->contents(), c_array_a, c_array_b, verification, arrayLength);
+            saxpy_openmp(k_CPP, a_CPP, b_CPP, c_VER, arrayLength);
             auto stop = std::chrono::high_resolution_clock::now();
             auto duration = (stop - start).count();
             durations[repeat] = duration;
