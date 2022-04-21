@@ -28,11 +28,6 @@ MetalOperations::MetalOperations(MTL::Device *device)
 
     std::cout << "Available Metal functions in 'ops.metallib':" << std::endl;
 
-    // MTL::Function *fnList[fnNames->count()];
-
-    std::map<std::string, MTL::Function *> functionMap;
-    std::map<std::string, MTL::ComputePipelineState *> functionPipelineMap;
-
     for (size_t i = 0; i < fnNames->count(); i++)
     {
 
@@ -60,10 +55,6 @@ MetalOperations::MetalOperations(MTL::Device *device)
 
     std::cout << std::endl;
 
-    _mAddFunctionPSO = functionPipelineMap["add_arrays"];
-    _mMultiplyFunctionPSO = functionPipelineMap["multiply_arrays"];
-    _mSaxpyFunctionPSO = functionPipelineMap["saxpy"];
-
     _mCommandQueue = _mDevice->newCommandQueue();
     if (_mCommandQueue == nullptr)
     {
@@ -83,7 +74,7 @@ void MetalOperations::addArrays(const MTL::Buffer *x_array,
     assert(computeEncoder != nullptr);
 
     // Encode the pipeline state object and its parameters.
-    computeEncoder->setComputePipelineState(_mAddFunctionPSO);
+    computeEncoder->setComputePipelineState(functionPipelineMap["add_arrays"]);
     computeEncoder->setBuffer(x_array, 0, 0);
     computeEncoder->setBuffer(y_array, 0, 1);
     computeEncoder->setBuffer(r_array, 0, 2);
@@ -91,7 +82,8 @@ void MetalOperations::addArrays(const MTL::Buffer *x_array,
     MTL::Size gridSize = MTL::Size::Make(arrayLength, 1, 1);
 
     // Calculate a threadgroup size.
-    NS::UInteger threadGroupSize = _mAddFunctionPSO->maxTotalThreadsPerThreadgroup();
+    NS::UInteger threadGroupSize =
+        functionPipelineMap["add_arrays"]->maxTotalThreadsPerThreadgroup();
 
     if (threadGroupSize > arrayLength)
     {
@@ -119,7 +111,7 @@ void MetalOperations::multiplyArrays(const MTL::Buffer *x_array,
     assert(computeEncoder != nullptr);
 
     // Encode the pipeline state object and its parameters.
-    computeEncoder->setComputePipelineState(_mMultiplyFunctionPSO);
+    computeEncoder->setComputePipelineState(functionPipelineMap["multiply_arrays"]);
     computeEncoder->setBuffer(x_array, 0, 0);
     computeEncoder->setBuffer(y_array, 0, 1);
     computeEncoder->setBuffer(r_array, 0, 2);
@@ -127,7 +119,8 @@ void MetalOperations::multiplyArrays(const MTL::Buffer *x_array,
     MTL::Size gridSize = MTL::Size::Make(arrayLength, 1, 1);
 
     // Calculate a threadgroup size.
-    NS::UInteger threadGroupSize = _mMultiplyFunctionPSO->maxTotalThreadsPerThreadgroup();
+    NS::UInteger threadGroupSize =
+        functionPipelineMap["multiply_arrays"]->maxTotalThreadsPerThreadgroup();
 
     if (threadGroupSize > arrayLength)
     {
@@ -155,7 +148,7 @@ void MetalOperations::saxpyArrays(const MTL::Buffer *alpha,
     assert(computeEncoder != nullptr);
 
     // Encode the pipeline state object and its parameters.
-    computeEncoder->setComputePipelineState(_mSaxpyFunctionPSO);
+    computeEncoder->setComputePipelineState(functionPipelineMap["saxpy"]);
     computeEncoder->setBuffer(alpha, 0, 0);
     computeEncoder->setBuffer(x_array, 0, 1);
     computeEncoder->setBuffer(y_array, 0, 2);
@@ -164,7 +157,8 @@ void MetalOperations::saxpyArrays(const MTL::Buffer *alpha,
     MTL::Size gridSize = MTL::Size::Make(arrayLength, 1, 1);
 
     // Calculate a threadgroup size.
-    NS::UInteger threadGroupSize = _mSaxpyFunctionPSO->maxTotalThreadsPerThreadgroup();
+    NS::UInteger threadGroupSize =
+        functionPipelineMap["saxpy"]->maxTotalThreadsPerThreadgroup();
 
     if (threadGroupSize > arrayLength)
     {

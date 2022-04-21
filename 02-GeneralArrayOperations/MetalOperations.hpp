@@ -12,6 +12,8 @@ A class to manage all of the Metal objects this app creates.
 #include "Foundation/Foundation.hpp"
 #include "Metal/Metal.hpp"
 
+#include "map"
+
 class MetalOperations
 {
 public:
@@ -36,10 +38,8 @@ public:
                      size_t arrayLength);
 
 private:
-    // The compute pipelines
-    MTL::ComputePipelineState *_mAddFunctionPSO;
-    MTL::ComputePipelineState *_mMultiplyFunctionPSO;
-    MTL::ComputePipelineState *_mSaxpyFunctionPSO;
+    std::map<std::string, MTL::Function *> functionMap;
+    std::map<std::string, MTL::ComputePipelineState *> functionPipelineMap;
 
     // The command queue used to pass commands to the device.
     MTL::CommandQueue *_mCommandQueue;
