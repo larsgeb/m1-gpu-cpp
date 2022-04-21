@@ -37,6 +37,11 @@ public:
                      MTL::Buffer *r_array,
                      size_t arrayLength);
 
+    void central_difference(const MTL::Buffer *delta,
+                            const MTL::Buffer *x_array,
+                            MTL::Buffer *r_array,
+                            size_t arrayLength);
+
 private:
     std::map<std::string, MTL::Function *> functionMap;
     std::map<std::string, MTL::ComputePipelineState *> functionPipelineMap;

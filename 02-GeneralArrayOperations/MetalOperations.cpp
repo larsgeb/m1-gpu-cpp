@@ -173,3 +173,39 @@ void MetalOperations::saxpyArrays(const MTL::Buffer *alpha,
     commandBuffer->commit();
     commandBuffer->waitUntilCompleted();
 }
+
+void MetalOperations::central_difference(const MTL::Buffer *delta,
+                                         const MTL::Buffer *x_array,
+                                         MTL::Buffer *r_array,
+                                         size_t arrayLength)
+{
+    MTL::CommandBuffer *commandBuffer = _mCommandQueue->commandBuffer();
+    assert(commandBuffer != nullptr);
+    MTL::ComputeCommandEncoder *computeEncoder = commandBuffer->computeCommandEncoder();
+    assert(computeEncoder != nullptr);
+
+    // Encode the pipeline state object and its parameters.
+    computeEncoder->setComputePipelineState(functionPipelineMap["central_difference"]);
+    computeEncoder->setBuffer(delta, 0, 0);
+    computeEncoder->setBuffer(x_array, 0, 1);
+    computeEncoder->setBuffer(r_array, 0, 2);
+
+    MTL::Size gridSize = MTL::Size::Make(arrayLength, 1, 1);
+
+    // Calculate a threadgroup size.
+    NS::UInteger threadGroupSize =
+        functionPipelineMap["central_difference"]->maxTotalThreadsPerThreadgroup();
+
+    if (threadGroupSize > arrayLength)
+    {
+        threadGroupSize = arrayLength;
+    }
+    MTL::Size threadgroupSize = MTL::Size::Make(threadGroupSize, 1, 1);
+
+    // Encode the compute command.
+    computeEncoder->dispatchThreads(gridSize, threadgroupSize);
+    computeEncoder->endEncoding();
+
+    commandBuffer->commit();
+    commandBuffer->waitUntilCompleted();
+}
