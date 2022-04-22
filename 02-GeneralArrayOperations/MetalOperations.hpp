@@ -26,6 +26,11 @@ public:
                    MTL::Buffer *r_array,
                    size_t arrayLength);
 
+    void addMultiply(const MTL::Buffer *x_array,
+                     const MTL::Buffer *y_array,
+                     MTL::Buffer *r_array,
+                     size_t arrayLength);
+
     void multiplyArrays(const MTL::Buffer *x_array,
                         const MTL::Buffer *y_array,
                         MTL::Buffer *r_array,

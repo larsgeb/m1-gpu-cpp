@@ -1,5 +1,3 @@
-
-
 #include "MetalOperations.hpp"
 #include <iostream>
 #include <list>
@@ -31,14 +29,15 @@ MetalOperations::MetalOperations(MTL::Device *device)
     for (size_t i = 0; i < fnNames->count(); i++)
     {
 
-        auto name_utf8 = fnNames->object(i)->description()->utf8String();
+        auto name_nsstring = fnNames->object(i)->description();
+        auto name_utf8 = name_nsstring->utf8String();
 
         // Output function to stdout
         std::cout << name_utf8 << std::endl;
 
         // Load function into a map
         functionMap[name_utf8] =
-            (opLibrary->newFunction(fnNames->object(i)->description()));
+            (opLibrary->newFunction(name_nsstring));
 
         // Create pipeline from function
         functionPipelineMap[name_utf8] =
@@ -96,6 +95,43 @@ void MetalOperations::addArrays(const MTL::Buffer *x_array,
     computeEncoder->endEncoding();
 
     commandBuffer->commit();
+    commandBuffer->waitUntilCompleted();
+}
+
+void MetalOperations::addMultiply(const MTL::Buffer *x_array,
+                                  const MTL::Buffer *y_array,
+                                  MTL::Buffer *r_array,
+                                  size_t arrayLength)
+{
+    // Example compound operator. Computes (x + y) * y.
+
+    MTL::CommandBuffer *commandBuffer = _mCommandQueue->commandBuffer();
+    assert(commandBuffer != nullptr);
+    MTL::ComputeCommandEncoder *computeEncoder = commandBuffer->computeCommandEncoder();
+    assert(computeEncoder != nullptr);
+
+    MTL::Size gridSize = MTL::Size::Make(arrayLength, 1, 1);
+    NS::UInteger threadGroupSize =
+        functionPipelineMap["add_arrays"]->maxTotalThreadsPerThreadgroup();
+    if (threadGroupSize > arrayLength)
+        threadGroupSize = arrayLength;
+    MTL::Size threadgroupSize = MTL::Size::Make(threadGroupSize, 1, 1);
+
+    computeEncoder->setComputePipelineState(functionPipelineMap["add_arrays"]);
+    computeEncoder->setBuffer(x_array, 0, 0);
+    computeEncoder->setBuffer(y_array, 0, 1);
+    computeEncoder->setBuffer(r_array, 0, 2);
+    computeEncoder->dispatchThreads(gridSize, threadgroupSize);
+
+    computeEncoder->setComputePipelineState(functionPipelineMap["multiply_arrays"]);
+    computeEncoder->setBuffer(r_array, 0, 0);
+    computeEncoder->setBuffer(y_array, 0, 1);
+    computeEncoder->setBuffer(r_array, 0, 2);
+    computeEncoder->dispatchThreads(gridSize, threadgroupSize);
+
+    computeEncoder->endEncoding();
+    commandBuffer->commit();
+
     commandBuffer->waitUntilCompleted();
 }
 

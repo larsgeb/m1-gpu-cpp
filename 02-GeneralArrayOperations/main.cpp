@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <omp.h>
+#include <assert.h>
 
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
@@ -12,22 +13,16 @@
 #include "QuartzCore/QuartzCore.hpp"
 
 #include "MetalOperations.hpp"
+#include "CPUOperations.hpp"
 
-const unsigned int arrayLength = 1 << 24;
+// Configuration -----------------------------------------------------------------------
+// Amount of repeats for benchmarking
+size_t repeats = 1000;
+// Length of array to test kernels on
+const unsigned int arrayLength = 1 << 26;
+// end ---------------------------------------------------------------------------------
+
 const unsigned int bufferSize = arrayLength * sizeof(float);
-void generateRandomFloatData(float *dataPtr, size_t arrayLength);
-
-void add(const float *x, const float *y, float *r, size_t arrayLength);
-void multiply(const float *x, const float *y, float *r, size_t arrayLength);
-void saxpy(const float *a, const float *x, const float *y, float *r, size_t arrayLength);
-
-void add_openmp(const float *x, const float *y, float *r, size_t arrayLength);
-void multiply_openmp(const float *x, const float *y, float *r, size_t arrayLength);
-void saxpy_openmp(const float *a, const float *x, const float *y, float *r, size_t arrayLength);
-
-bool equalArray(const float *x, const float *y, size_t arrayLength);
-void statistics(float *array, size_t length, float &array_mean, float &array_std);
-int omp_thread_count();
 
 int main(int argc, char *argv[])
 {
@@ -36,11 +31,12 @@ int main(int argc, char *argv[])
 
     MTL::Device *device = MTL::CreateSystemDefaultDevice();
 
-    std::cout << "Running on " << device->name()->utf8String() << std::endl
+    std::cout << "Running on " << device->name()->utf8String() << std::endl;
+    std::cout << "Array size " << arrayLength << ", tests repeated " << repeats
+              << " times" << std::endl
               << std::endl;
 
     // MTL buffers to hold data.
-    // device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged)
     MTL::Buffer *a_MTL = device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged);
     MTL::Buffer *b_MTL = device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged);
     MTL::Buffer *c_MTL = device->newBuffer(bufferSize, MTL::ResourceStorageModeManaged);
@@ -57,37 +53,41 @@ int main(int argc, char *argv[])
 
     generateRandomFloatData(a_CPP, arrayLength);
     generateRandomFloatData(b_CPP, arrayLength);
-    *k_CPP = 904.89547f;
+    setZeros(c_CPP, arrayLength);
+    *k_CPP = 1.0f;
 
     // Create GPU object
     MetalOperations *arrayOps = new MetalOperations(device);
 
-    // Verify general array operations -------------------------------------------------
+    // Verify all array operations -----------------------------------------------------
     arrayOps->addArrays(a_MTL, b_MTL, c_MTL, arrayLength);
     add(a_CPP, b_CPP, c_VER, arrayLength);
-    if (equalArray(c_CPP, c_VER, arrayLength))
-    {
-        std::cout << "Add arrays works fine" << std::endl;
-    }
+    assert(equalArray(c_CPP, c_VER, arrayLength));
+    setZeros(c_CPP, arrayLength);
+    std::cout << "Add result is equal to CPU code" << std::endl;
 
     arrayOps->multiplyArrays(a_MTL, b_MTL, c_MTL, arrayLength);
     multiply(a_CPP, b_CPP, c_VER, arrayLength);
-    if (equalArray(c_CPP, c_VER, arrayLength))
-    {
-        std::cout << "Multiply arrays works fine" << std::endl;
-    }
+    assert(equalArray(c_CPP, c_VER, arrayLength));
+    setZeros(c_CPP, arrayLength);
+    std::cout << "Multiply result is equal to CPU code" << std::endl;
 
     arrayOps->saxpyArrays(k_MTL, a_MTL, b_MTL, c_MTL, arrayLength);
     saxpy(k_CPP, a_CPP, b_CPP, c_VER, arrayLength);
-    if (equalArray(c_CPP, c_VER, arrayLength))
-    {
-        std::cout << "SAXPY works fine" << std::endl
-                  << std::endl;
-    }
+    assert(equalArray(c_CPP, c_VER, arrayLength));
+    setZeros(c_CPP, arrayLength);
+    std::cout << "SAXPY result is equal to CPU code" << std::endl;
 
+    arrayOps->central_difference(k_MTL, a_MTL, c_MTL, arrayLength);
+    central_difference(k_CPP, a_CPP, c_VER, arrayLength);
+    assert(equalArray(c_CPP, c_VER, arrayLength));
+    setZeros(c_CPP, arrayLength);
+    std::cout << "Central difference result is equal to CPU code" << std::endl
+              << std::endl;
+
+    // SAXPY benchmarking --------------------------------------------------------------
     std::cout << "Starting SAXPY benchmarking ..." << std::endl;
 
-    size_t repeats = 1000;
     float *durations = new float[repeats];
     float array_mean;
     float array_std;
@@ -135,117 +135,52 @@ int main(int argc, char *argv[])
         std::cout << "OpenMP (" << omp_thread_count() << " cores): \t"
                   << array_mean << "ms +/- " << array_std << "ms" << std::endl;
     }
-}
 
-void generateRandomFloatData(float *dataPtr, size_t arrayLength)
-{
-    for (unsigned long index = 0; index < arrayLength; index++)
+    // Central differencing benchmarking -----------------------------------------------
+    std::cout << std::endl
+              << "Starting central differencing benchmarking ..." << std::endl;
+
+    for (size_t repeat = 0; repeat < repeats; repeat++)
     {
-        dataPtr[index] = (float)rand() / (float)(RAND_MAX);
+        auto start = std::chrono::high_resolution_clock::now();
+        arrayOps->central_difference(k_MTL, a_MTL, c_MTL, arrayLength);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = (stop - start).count();
+        durations[repeat] = duration;
     }
-}
-
-void add(const float *x, const float *y, float *r, size_t arrayLength)
-{
-    for (unsigned long index = 0; index < arrayLength; index++)
+    statistics(durations, repeats, array_mean, array_std);
+    array_mean /= 1e3;
+    array_std /= 1e3;
+    std::cout << "Metal (GPU): \t\t"
+              << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+    for (size_t repeat = 0; repeat < repeats; repeat++)
     {
-        r[index] = x[index] + y[index];
+        auto start = std::chrono::high_resolution_clock::now();
+        central_difference(k_CPP, a_CPP, c_VER, arrayLength);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = (stop - start).count();
+        durations[repeat] = duration;
     }
-}
-
-void multiply(const float *x, const float *y, float *r, size_t arrayLength)
-{
-    for (unsigned long index = 0; index < arrayLength; index++)
+    statistics(durations, repeats, array_mean, array_std);
+    array_mean /= 1e3;
+    array_std /= 1e3;
+    std::cout << "Serial: \t\t"
+              << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+    for (size_t threads = 2; threads < 15; threads++)
     {
-        r[index] = x[index] * y[index];
-    }
-}
-
-void saxpy(const float *a, const float *x, const float *y, float *r, size_t arrayLength)
-{
-    for (unsigned long index = 0; index < arrayLength; index++)
-    {
-        r[index] = *a * x[index] + y[index];
-    }
-}
-
-void add_openmp(const float *x, const float *y, float *r, size_t arrayLength)
-{
-    unsigned long i;
-#pragma omp parallel for default(none) private(i) shared(x, y, arrayLength, r)
-
-    for (i = 0; i < arrayLength; i++)
-    {
-        r[i] = x[i] + y[i];
-    }
-}
-
-void multiply_openmp(const float *x, const float *y, float *r, size_t arrayLength)
-{
-    unsigned long i;
-#pragma omp parallel for default(none) private(i) shared(x, y, arrayLength, r)
-
-    for (i = 0; i < arrayLength; i++)
-    {
-        r[i] = x[i] * y[i];
-    }
-}
-
-void saxpy_openmp(const float *a, const float *x, const float *y, float *r, size_t arrayLength)
-{
-    unsigned long i;
-#pragma omp parallel for default(none) private(i) shared(a, x, y, arrayLength, r)
-    for (i = 0; i < arrayLength; i++)
-    {
-        r[i] = *a * x[i] * y[i];
-    }
-}
-
-bool equalFloat(float a, float b, float epsilon)
-{
-    return fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
-}
-
-bool equalArray(const float *x, const float *y, size_t arrayLength)
-{
-    for (unsigned long index = 0; index < arrayLength; index++)
-    {
-        if (!equalFloat(x[index], y[index], std::numeric_limits<float>::epsilon()))
+        omp_set_num_threads(threads);
+        for (size_t repeat = 0; repeat < repeats; repeat++)
         {
-
-            printf("Compute ERROR: index=%lu x=%e vs y=%e\n",
-                   index, x[index], y[index]);
-            return false;
-        };
+            auto start = std::chrono::high_resolution_clock::now();
+            central_difference_openmp(k_CPP, a_CPP, c_VER, arrayLength);
+            auto stop = std::chrono::high_resolution_clock::now();
+            auto duration = (stop - start).count();
+            durations[repeat] = duration;
+        }
+        statistics(durations, repeats, array_mean, array_std);
+        array_mean /= 1e3;
+        array_std /= 1e3;
+        std::cout << "OpenMP (" << omp_thread_count() << " cores): \t"
+                  << array_mean << "ms +/- " << array_std << "ms" << std::endl;
     }
-    return true;
-}
-
-void statistics(float *array, size_t length, float &array_mean, float &array_std)
-{
-    // Compute mean and standard deviation serially, template function
-
-    array_mean = 0;
-    for (size_t repeat = 0; repeat < length; repeat++)
-    {
-        array_mean += array[repeat];
-    }
-    array_mean /= length;
-
-    array_std = 0;
-    for (size_t repeat = 0; repeat < length; repeat++)
-    {
-        array_std += pow(array_mean - array[repeat], 2.0);
-    }
-    array_std /= length;
-    array_std = pow(array_std, 0.5);
-}
-
-int omp_thread_count()
-{
-    int n = 0;
-#pragma omp parallel reduction(+ \
-                               : n)
-    n += 1;
-    return n;
 }
