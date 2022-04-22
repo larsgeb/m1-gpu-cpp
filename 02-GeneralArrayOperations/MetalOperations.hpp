@@ -21,29 +21,33 @@ public:
 
     MetalOperations(MTL::Device *device);
 
-    void addArrays(const MTL::Buffer *x_array,
-                   const MTL::Buffer *y_array,
+    void Blocking1D(std::vector<MTL::Buffer *> buffers,
+                    size_t arrayLength,
+                    const char *method);
+
+    void addArrays(MTL::Buffer *x_array,
+                   MTL::Buffer *y_array,
                    MTL::Buffer *r_array,
                    size_t arrayLength);
 
-    void addMultiply(const MTL::Buffer *x_array,
-                     const MTL::Buffer *y_array,
+    void addMultiply(MTL::Buffer *x_array,
+                     MTL::Buffer *y_array,
                      MTL::Buffer *r_array,
                      size_t arrayLength);
 
-    void multiplyArrays(const MTL::Buffer *x_array,
-                        const MTL::Buffer *y_array,
+    void multiplyArrays(MTL::Buffer *x_array,
+                        MTL::Buffer *y_array,
                         MTL::Buffer *r_array,
                         size_t arrayLength);
 
-    void saxpyArrays(const MTL::Buffer *alpha,
-                     const MTL::Buffer *x_array,
-                     const MTL::Buffer *y_array,
+    void saxpyArrays(MTL::Buffer *alpha,
+                     MTL::Buffer *x_array,
+                     MTL::Buffer *y_array,
                      MTL::Buffer *r_array,
                      size_t arrayLength);
 
-    void central_difference(const MTL::Buffer *delta,
-                            const MTL::Buffer *x_array,
+    void central_difference(MTL::Buffer *delta,
+                            MTL::Buffer *x_array,
                             MTL::Buffer *r_array,
                             size_t arrayLength);
 
