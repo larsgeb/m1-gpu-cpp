@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
         statistics(durations, repeats, array_mean, array_std);
         array_mean /= 1e3;
         array_std /= 1e3;
-        std::cout << "OpenMP (" << omp_thread_count() << " cores): \t"
+        std::cout << "OpenMP (" << omp_thread_count() << " threads): \t"
                   << array_mean << "ms +/- " << array_std << "ms" << std::endl;
     }
 
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
         statistics(durations, repeats, array_mean, array_std);
         array_mean /= 1e3;
         array_std /= 1e3;
-        std::cout << "OpenMP (" << omp_thread_count() << " cores): \t"
+        std::cout << "OpenMP (" << omp_thread_count() << " threads): \t"
                   << array_mean << "ms +/- " << array_std << "ms" << std::endl;
     }
 }

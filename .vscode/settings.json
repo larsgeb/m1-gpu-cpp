@@ -75,6 +75,7 @@
         "utility": "cpp",
         "__tree": "cpp",
         "list": "cpp",
-        "map": "cpp"
+        "map": "cpp",
+        "__memory": "cpp"
     }
 }
