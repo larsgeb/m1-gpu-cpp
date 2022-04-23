@@ -15,11 +15,14 @@
 #include "MetalOperations.hpp"
 #include "CPUOperations.hpp"
 
+typedef std::chrono::microseconds time_unit;
+auto unit_name = "microseconds";
+
 // Configuration -----------------------------------------------------------------------
 // Amount of repeats for benchmarking
-size_t repeats = 1000;
+size_t repeats = 100;
 // Length of array to test kernels on
-const unsigned int arrayLength = 1 << 26;
+const unsigned int arrayLength = 1 << 27;
 // end ---------------------------------------------------------------------------------
 
 const unsigned int bufferSize = arrayLength * sizeof(float);
@@ -97,27 +100,23 @@ int main(int argc, char *argv[])
         auto start = std::chrono::high_resolution_clock::now();
         arrayOps->saxpyArrays(k_MTL, a_MTL, b_MTL, c_MTL, arrayLength);
         auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = (stop - start).count();
+        auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
         durations[repeat] = duration;
     }
     statistics(durations, repeats, array_mean, array_std);
-    array_mean /= 1e3;
-    array_std /= 1e3;
     std::cout << "Metal (GPU): \t\t"
-              << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+              << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl;
     for (size_t repeat = 0; repeat < repeats; repeat++)
     {
         auto start = std::chrono::high_resolution_clock::now();
         saxpy(k_CPP, a_CPP, b_CPP, c_VER, arrayLength);
         auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = (stop - start).count();
+        auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
         durations[repeat] = duration;
     }
     statistics(durations, repeats, array_mean, array_std);
-    array_mean /= 1e3;
-    array_std /= 1e3;
     std::cout << "Serial: \t\t"
-              << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+              << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl;
     for (size_t threads = 2; threads < 15; threads++)
     {
         omp_set_num_threads(threads);
@@ -126,14 +125,12 @@ int main(int argc, char *argv[])
             auto start = std::chrono::high_resolution_clock::now();
             saxpy_openmp(k_CPP, a_CPP, b_CPP, c_VER, arrayLength);
             auto stop = std::chrono::high_resolution_clock::now();
-            auto duration = (stop - start).count();
+            auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
             durations[repeat] = duration;
         }
         statistics(durations, repeats, array_mean, array_std);
-        array_mean /= 1e3;
-        array_std /= 1e3;
         std::cout << "OpenMP (" << omp_thread_count() << " threads): \t"
-                  << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+                  << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl;
     }
 
     // Central differencing benchmarking -----------------------------------------------
@@ -145,27 +142,23 @@ int main(int argc, char *argv[])
         auto start = std::chrono::high_resolution_clock::now();
         arrayOps->central_difference(k_MTL, a_MTL, c_MTL, arrayLength);
         auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = (stop - start).count();
+        auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
         durations[repeat] = duration;
     }
     statistics(durations, repeats, array_mean, array_std);
-    array_mean /= 1e3;
-    array_std /= 1e3;
     std::cout << "Metal (GPU): \t\t"
-              << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+              << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl;
     for (size_t repeat = 0; repeat < repeats; repeat++)
     {
         auto start = std::chrono::high_resolution_clock::now();
         central_difference(k_CPP, a_CPP, c_VER, arrayLength);
         auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = (stop - start).count();
+        auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
         durations[repeat] = duration;
     }
     statistics(durations, repeats, array_mean, array_std);
-    array_mean /= 1e3;
-    array_std /= 1e3;
     std::cout << "Serial: \t\t"
-              << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+              << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl;
     for (size_t threads = 2; threads < 15; threads++)
     {
         omp_set_num_threads(threads);
@@ -174,13 +167,11 @@ int main(int argc, char *argv[])
             auto start = std::chrono::high_resolution_clock::now();
             central_difference_openmp(k_CPP, a_CPP, c_VER, arrayLength);
             auto stop = std::chrono::high_resolution_clock::now();
-            auto duration = (stop - start).count();
+            auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
             durations[repeat] = duration;
         }
         statistics(durations, repeats, array_mean, array_std);
-        array_mean /= 1e3;
-        array_std /= 1e3;
         std::cout << "OpenMP (" << omp_thread_count() << " threads): \t"
-                  << array_mean << "ms +/- " << array_std << "ms" << std::endl;
+                  << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl;
     }
 }
