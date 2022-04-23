@@ -150,6 +150,19 @@ void MetalOperations::central_difference(MTL::Buffer *delta,
     Blocking1D(buffers, arrayLength, method);
 }
 
+void MetalOperations::inspector(MTL::Buffer *x_array,
+                                MTL::Buffer *r_array,
+                                MTL::Buffer *store,
+                                size_t arrayLength)
+{
+    std::vector<MTL::Buffer *> buffers = {x_array,
+                                          r_array,
+                                          store};
+    const char *method = "inspector";
+
+    Blocking1D(buffers, arrayLength, method);
+}
+
 void MetalOperations::addMultiply(MTL::Buffer *x_array,
                                   MTL::Buffer *y_array,
                                   MTL::Buffer *r_array,
