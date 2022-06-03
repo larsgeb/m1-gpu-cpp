@@ -76,6 +76,9 @@
         "__tree": "cpp",
         "list": "cpp",
         "map": "cpp",
-        "__memory": "cpp"
+        "__memory": "cpp",
+        "iomanip": "cpp",
+        "fstream": "cpp",
+        "stack": "cpp"
     }
 }

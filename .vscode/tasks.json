@@ -65,7 +65,7 @@
 				"-I${workspaceFolder}/metal-cpp", "-fno-objc-arc",
 				"-framework", "Metal", "-framework", "Foundation", "-framework", "MetalKit",
 				"-g",
-				"${workspaceFolder}/02-GeneralArrayOperations/chaining_operators.cpp",
+				"${workspaceFolder}/02-GeneralArrayOperations/main_chaining.cpp",
 				"${workspaceFolder}/02-GeneralArrayOperations/CPUOperations.cpp",
 				"${workspaceFolder}/02-GeneralArrayOperations/MetalOperations.cpp",
 				"-o",
@@ -116,6 +116,38 @@
 			"detail": "compiler: /opt/homebrew/opt/llvm/bin/clang++",
 			"dependsOn": ["Build .metallib 02"],
 		}, {
+			"type": "cppbuild",
+			"label": "Build benchmark paper 02",
+			"command": "/opt/homebrew/opt/llvm/bin/clang++",
+			"args": [
+				"-std=c++17",
+				"-stdlib=libc++",
+				"-O2",
+				// OpenMP includes & configuration
+				"-L/opt/homebrew/opt/libomp/lib", "-fopenmp",
+				// Metal includes & configuration
+				"-I${workspaceFolder}/metal-cpp", "-fno-objc-arc",
+				"-framework", "Metal", "-framework", "Foundation", "-framework", "MetalKit",
+				"-g",
+				"${workspaceFolder}/paper/paper_benchmark_02.cpp",
+				"${workspaceFolder}/02-GeneralArrayOperations/CPUOperations.cpp",
+				"${workspaceFolder}/02-GeneralArrayOperations/MetalOperations.cpp",
+				"-o",
+				"${workspaceFolder}/paper/paper_benchmark_02.x"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "compiler: /opt/homebrew/opt/llvm/bin/clang++",
+			"dependsOn": ["Build .metallib 02"],
+		}, {
 			"type": "shell",
 			"label": "Build .air 02",
 			"command": "xcrun",
@@ -133,6 +165,90 @@
 				"-o", "${workspaceFolder}/02-GeneralArrayOperations/ops.metallib"
 			],
 			"dependsOn": ["Build .air 02"]
+
+		}, {
+			"type": "cppbuild",
+			"label": "Build 03",
+			"command": "/opt/homebrew/opt/llvm/bin/clang++",
+			"args": [
+				"-std=c++17",
+				"-stdlib=libc++",
+				"-O2",
+				// OpenMP includes & configuration
+				"-L/opt/homebrew/opt/libomp/lib", "-fopenmp",
+				// Metal includes & configuration
+				"-I${workspaceFolder}/metal-cpp", "-fno-objc-arc",
+				"-framework", "Metal", "-framework", "Foundation", "-framework", "MetalKit",
+				"-g",
+				"${workspaceFolder}/03-2DKernels/main.cpp",
+				"${workspaceFolder}/03-2DKernels/CPUOperations.cpp",
+				"${workspaceFolder}/03-2DKernels/MetalOperations.cpp",
+				"-o",
+				"${workspaceFolder}/03-2DKernels/benchmark.x"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "compiler: /opt/homebrew/opt/llvm/bin/clang++",
+			"dependsOn": ["Build .metallib 03"],
+		}, {
+			"type": "cppbuild",
+			"label": "Build benchmark paper 03",
+			"command": "/opt/homebrew/opt/llvm/bin/clang++",
+			"args": [
+				"-std=c++17",
+				// "-stdlib=libc++",
+				"-std=c++11",
+				"-O2",
+				// OpenMP includes & configuration
+				"-L/opt/homebrew/opt/libomp/lib", "-fopenmp",
+				// Metal includes & configuration
+				"-I${workspaceFolder}/metal-cpp", "-fno-objc-arc",
+				"-framework", "Metal", "-framework", "Foundation", "-framework", "MetalKit",
+				"-g",
+				"${workspaceFolder}/paper/paper_benchmark_03.cpp",
+				"${workspaceFolder}/03-2DKernels/CPUOperations.cpp",
+				"${workspaceFolder}/03-2DKernels/MetalOperations.cpp",
+				"-o",
+				"${workspaceFolder}/paper/paper_benchmark_03.x"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "compiler: /opt/homebrew/opt/llvm/bin/clang++",
+			"dependsOn": ["Build .metallib 03"],
+		}, {
+			"type": "shell",
+			"label": "Build .air 03",
+			"command": "xcrun",
+			"args": [
+				"-sdk", "macosx", "metal",
+				"-c", "${workspaceFolder}/03-2DKernels/ops.metal",
+				"-o", "${workspaceFolder}/03-2DKernels/ops.air"
+			]
+		}, {
+			"type": "shell",
+			"label": "Build .metallib 03",
+			"command": "xcrun",
+			"args": [
+				"-sdk", "macosx", "metallib", "${workspaceFolder}/03-2DKernels/ops.air",
+				"-o", "${workspaceFolder}/03-2DKernels/ops.metallib"
+			],
+			"dependsOn": ["Build .air 03"]
 
 		},
 	]

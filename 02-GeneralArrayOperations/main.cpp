@@ -22,7 +22,8 @@ auto unit_name = "microseconds";
 // Amount of repeats for benchmarking
 size_t repeats = 100;
 // Length of array to test kernels on
-const unsigned int arrayLength = 1 << 27;
+
+const unsigned int arrayLength = 60 * 180 * 10000;
 // end ---------------------------------------------------------------------------------
 
 const unsigned int bufferSize = arrayLength * sizeof(float);

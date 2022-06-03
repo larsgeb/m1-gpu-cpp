@@ -21,6 +21,9 @@ int omp_thread_count();
 template <class T>
 void statistics(T *array, size_t length, T &array_mean, T &array_std);
 
+typedef std::chrono::microseconds time_unit;
+auto unit_name = "microseconds";
+
 int main(int argc, char *argv[])
 {
     // Create GPU code / arrays --------------------------------------------------------
@@ -39,16 +42,14 @@ int main(int argc, char *argv[])
         auto start = std::chrono::high_resolution_clock::now();
         adder->sendComputeCommand();
         auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = (stop - start).count();
+        auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
         durations[repeat] = duration;
     }
     float array_mean;
     float array_std;
     statistics(durations, repeats, array_mean, array_std);
-    array_mean /= 1e3;
-    array_std /= 1e3;
     std::cout << "Metal (GPU) code performance: " << std::endl;
-    std::cout << "Average time: " << array_mean << "ms +/- " << array_std << "ms" << std::endl
+    std::cout << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl
               << std::endl;
 
     // Verify serial code --------------------------------------------------------------
@@ -69,14 +70,14 @@ int main(int argc, char *argv[])
         auto start = std::chrono::high_resolution_clock::now();
         add_array_serial(array_a, array_b, array_c, arrayLength);
         auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = (stop - start).count();
+        auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
         durations[repeat] = duration;
     }
     statistics(durations, repeats, array_mean, array_std);
     array_mean /= 1e3;
     array_std /= 1e3;
     std::cout << "Serial code performance: " << std::endl;
-    std::cout << "Average time: " << array_mean << "ms +/- " << array_std << "ms" << std::endl
+    std::cout << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl
               << std::endl;
 
     size_t max_threads = 10;
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
             auto start = std::chrono::high_resolution_clock::now();
             add_array_openmp(array_a, array_b, array_c, arrayLength);
             auto stop = std::chrono::high_resolution_clock::now();
-            auto duration = (stop - start).count();
+            auto duration = std::chrono::duration_cast<time_unit>(stop - start).count();
             durations[repeat] = duration;
         }
         statistics(durations, repeats, array_mean, array_std);
@@ -106,7 +107,7 @@ int main(int argc, char *argv[])
         array_mean /= 1e3;
         array_std /= 1e3;
         std::cout << "OpenMP (" << omp_thread_count() << " threads) code performance: " << std::endl;
-        std::cout << "Average time: " << array_mean << "ms +/- " << array_std << "ms" << std::endl
+        std::cout << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl
                   << std::endl;
     }
 }

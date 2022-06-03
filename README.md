@@ -2,7 +2,12 @@
 
 In this repo, I explore the capabilities of the Metal Shading Language 
 combined with C++, specifically for use of accelerating scientific codes.
-I wrote a few blog posts about the work in this repo:
+
+This repo accompaines "Seamless GPU acceleration for C++ based physics using the M1's
+unified processing units, a case study for elastic wave propagation and full-waveform
+inversion". If you use VSCode, all instructions to compile can be found in `.vscode`.
+
+I also wrote a few blog posts about the work in this repo:
 
 - [Getting started](https://larsgeb.github.io/2022/04/20/m1-gpu.html)
 - [SAXPY and FD](https://larsgeb.github.io/2022/04/22/m1-gpu.html)
