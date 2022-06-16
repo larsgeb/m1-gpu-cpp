@@ -15,3 +15,6 @@ I also wrote a few blog posts about the work in this repo:
 However, if you just want to try out the code, make sure you install `llvm` 
 and `libomp` using brew and Xcode and its command line tools. By cloning the 
 repo and opening it in VSCode you should have all build configurations.
+
+Additionally, I wrote a preprint (with the actual paper currently in peer-review) on how
+to use MSL for modelling of PDEs [available on arXiv](https://arxiv.org/abs/2206.01791).
