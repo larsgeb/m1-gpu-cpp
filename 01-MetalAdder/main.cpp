@@ -74,8 +74,6 @@ int main(int argc, char *argv[])
         durations[repeat] = duration;
     }
     statistics(durations, repeats, array_mean, array_std);
-    array_mean /= 1e3;
-    array_std /= 1e3;
     std::cout << "Serial code performance: " << std::endl;
     std::cout << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl
               << std::endl;
@@ -103,9 +101,6 @@ int main(int argc, char *argv[])
             durations[repeat] = duration;
         }
         statistics(durations, repeats, array_mean, array_std);
-
-        array_mean /= 1e3;
-        array_std /= 1e3;
         std::cout << "OpenMP (" << omp_thread_count() << " threads) code performance: " << std::endl;
         std::cout << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl
                   << std::endl;

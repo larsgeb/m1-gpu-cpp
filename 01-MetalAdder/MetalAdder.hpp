@@ -13,7 +13,8 @@ A class to manage all of the Metal objects this app creates.
 #include "Metal/Metal.hpp"
 
 // The number of floats in each array, and the size of the arrays in bytes.
-const unsigned int arrayLength = 1 << 26;
+const unsigned int arrayLength = 60 * 180 * 10000;
+
 const unsigned int bufferSize = arrayLength * sizeof(float);
 
 class MetalAdder
