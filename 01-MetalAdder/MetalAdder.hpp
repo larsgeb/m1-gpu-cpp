@@ -34,6 +34,8 @@ public:
     MTL::Buffer *_mBufferResult;
 
     MetalAdder(MTL::Device *device);
+    ~MetalAdder();
+
     void prepareData();
     void sendComputeCommand();
     void verifyResults();

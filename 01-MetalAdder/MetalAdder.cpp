@@ -29,6 +29,7 @@ MetalAdder::MetalAdder(MTL::Device *device)
 
     auto str = NS::String::string("add_arrays", NS::ASCIIStringEncoding);
     MTL::Function *addFunction = defaultLibrary->newFunction(str);
+    defaultLibrary->release();
 
     if (addFunction == nullptr)
     {
@@ -38,6 +39,7 @@ MetalAdder::MetalAdder(MTL::Device *device)
 
     // Create a compute pipeline state object.
     _mAddFunctionPSO = _mDevice->newComputePipelineState(addFunction, &error);
+    addFunction->release();
 
     if (_mAddFunctionPSO == nullptr)
     {
@@ -55,16 +57,16 @@ MetalAdder::MetalAdder(MTL::Device *device)
         return;
     }
 
+    // Allocate three buffers to hold our initial data and the result.
+    _mBufferA = _mDevice->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
+    _mBufferB = _mDevice->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
+    _mBufferResult = _mDevice->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
+
     prepareData();
 }
 
 void MetalAdder::prepareData()
 {
-    // Allocate three buffers to hold our initial data and the result.
-
-    _mBufferA = _mDevice->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
-    _mBufferB = _mDevice->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
-    _mBufferResult = _mDevice->newBuffer(bufferSize, MTL::ResourceStorageModeShared);
 
     generateRandomFloatData(_mBufferA);
     generateRandomFloatData(_mBufferB);
@@ -142,4 +144,14 @@ void MetalAdder::verifyResults()
             assert(result[index] == (a[index] + b[index]));
         }
     }
+}
+
+MetalAdder::~MetalAdder()
+{
+    _mBufferA->release();
+    _mBufferB->release();
+    _mBufferResult->release();
+
+    _mAddFunctionPSO->release();
+    _mCommandQueue->release();
 }

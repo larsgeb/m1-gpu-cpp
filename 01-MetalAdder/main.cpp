@@ -53,14 +53,15 @@ int main(int argc, char *argv[])
               << std::endl;
 
     // Verify serial code --------------------------------------------------------------
-    // Let's randomize the data again, making sure that the result buffer starts out
-    // incorrect
-    adder->prepareData();
     // Get buffers pointers for CPU code. Using MTL::ResourceStorageModeShared should
     // make them accessible to both GPU and CPU, perfect!
     auto array_a = ((float *)adder->_mBufferA->contents());
     auto array_b = ((float *)adder->_mBufferB->contents());
     auto array_c = ((float *)adder->_mBufferResult->contents());
+
+    // Let's randomize the data again, making sure that the result buffer starts out
+    // incorrect
+    adder->prepareData();
     add_array_serial(array_a, array_b, array_c, arrayLength);
     adder->verifyResults();
 
@@ -85,9 +86,6 @@ int main(int argc, char *argv[])
         // Verify OpenMP code --------------------------------------------------------------
         omp_set_num_threads(threads);
         adder->prepareData();
-        array_a = ((float *)adder->_mBufferA->contents());
-        array_b = ((float *)adder->_mBufferB->contents());
-        array_c = ((float *)adder->_mBufferResult->contents());
         add_array_openmp(array_a, array_b, array_c, arrayLength);
         adder->verifyResults();
 
@@ -105,6 +103,10 @@ int main(int argc, char *argv[])
         std::cout << array_mean << unit_name << " \t +/- " << array_std << unit_name << std::endl
                   << std::endl;
     }
+
+    delete[] durations;
+    delete adder;
+    device->release();
 }
 
 template <class T>
