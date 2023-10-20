@@ -133,7 +133,6 @@ kernel void inspector(
                   uint quadgroups_per_threadgroup              [[quadgroups_per_threadgroup]], 
                   uint simdgroup_index_in_threadgroup          [[simdgroup_index_in_threadgroup]], 
                   uint simdgroups_per_threadgroup              [[simdgroups_per_threadgroup]], 
-                  uint thread_execution_width                  [[thread_execution_width]], 
                   uint thread_index_in_quadgroup               [[thread_index_in_quadgroup]], 
                   uint thread_index_in_simdgroup               [[thread_index_in_simdgroup]], 
                   uint thread_index_in_threadgroup             [[thread_index_in_threadgroup]], 
@@ -157,15 +156,14 @@ kernel void inspector(
         store[8] = quadgroups_per_threadgroup;      
         store[9] = simdgroup_index_in_threadgroup;
         store[10] = simdgroups_per_threadgroup;
-        store[11] = thread_execution_width;
-        store[12] = thread_index_in_quadgroup;
-        store[13] = thread_index_in_simdgroup;
-        store[14] = thread_index_in_threadgroup;
-        store[15] = thread_position_in_threadgroup;
-        store[16] = threadgroup_position_in_grid;
-        store[17] = threadgroups_per_grid;
-        store[18] = threads_per_simdgroup;
-        store[19] = threads_per_threadgroup;
+        store[11] = thread_index_in_quadgroup;
+        store[12] = thread_index_in_simdgroup;
+        store[13] = thread_index_in_threadgroup;
+        store[14] = thread_position_in_threadgroup;
+        store[15] = threadgroup_position_in_grid;
+        store[16] = threadgroups_per_grid;
+        store[17] = threads_per_simdgroup;
+        store[18] = threads_per_threadgroup;
     }
 
 }
