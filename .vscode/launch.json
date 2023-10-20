@@ -1,14 +1,5 @@
 {
-    "configurations": [{
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "cwd": "${workspaceFolder}/paper",
-
-        },
+    "configurations": [
         {
             "name": "MetalAdder benchmark debugging",
             "type": "cppdbg",
@@ -33,6 +24,42 @@
             "externalConsole": false,
             "MIMode": "lldb",
             "preLaunchTask": "Build 02"
+        }, {
+            "name": "MetalOperations Chaining debugging",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/02-GeneralArrayOperations/chaining_benchmark.x",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/02-GeneralArrayOperations",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "Build 02 chaining"
+        },  {
+            "name": "MetalOperations benchmark paper debugging",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/paper/paper_benchmark_02.x",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/02-GeneralArrayOperations",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "Build benchmark paper 02"
+        }, {
+            "name": "2DKernels debugging",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/03-2DKernels/benchmark.x",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/03-2DKernels",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "Build 03"
         }
     ]
 }
