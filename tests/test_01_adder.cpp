@@ -20,7 +20,20 @@ int main()
         std::cerr << "FAIL: No Metal device found." << std::endl;
         return 1;
     }
-    std::cout << "Running on " << device->name()->utf8String() << std::endl;
+    std::string deviceName = device->name()->utf8String();
+    std::cout << "Running on " << deviceName << std::endl;
+
+    // The MetalAdder sample uses 108 M element buffers (1.3 GB total).
+    // The Apple Paravirtual device (used in CI virtual machines) cannot dispatch
+    // a compute grid of this size; the kernel silently produces all-zero output.
+    // Skip rather than fail so the CI result is informative, not misleading.
+    if (deviceName.find("Paravirtual") != std::string::npos)
+    {
+        std::cout << "SKIP: Paravirtual device — test_01_adder requires real Apple Silicon "
+                     "(108 M element dispatch not supported)." << std::endl;
+        device->release();
+        return 77; // CTest SKIP_RETURN_CODE
+    }
 
     MetalAdder *adder = new MetalAdder(device);
 
