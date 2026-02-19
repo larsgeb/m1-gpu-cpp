@@ -39,3 +39,23 @@
 .DS_Store
 
 *.csv
+
+# Build
+build/
+
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+dist/
+*.pyc
+
+# Notebooks (use jupytext .py light format instead)
+*.ipynb
+.ipynb_checkpoints/
+
+# IDE / editor
+.vscode/
+
+# Claude Code
+.claude/

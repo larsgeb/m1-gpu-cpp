@@ -64,14 +64,13 @@ kernel void inspector(
                   uint quadgroups_per_threadgroup              [[quadgroups_per_threadgroup]], 
                   uint simdgroup_index_in_threadgroup          [[simdgroup_index_in_threadgroup]], 
                   uint simdgroups_per_threadgroup              [[simdgroups_per_threadgroup]], 
-                  uint thread_execution_width                  [[thread_execution_width]], 
-                  uint thread_index_in_quadgroup               [[thread_index_in_quadgroup]], 
-                  uint thread_index_in_simdgroup               [[thread_index_in_simdgroup]], 
-                  uint thread_index_in_threadgroup             [[thread_index_in_threadgroup]], 
-                  uint thread_position_in_threadgroup          [[thread_position_in_threadgroup]], 
+                  uint thread_execution_width                  [[thread_execution_width]],
+                  uint thread_index_in_quadgroup               [[thread_index_in_quadgroup]],
+                  uint thread_index_in_simdgroup               [[thread_index_in_simdgroup]],
+                  uint thread_index_in_threadgroup             [[thread_index_in_threadgroup]],
+                  uint thread_position_in_threadgroup          [[thread_position_in_threadgroup]],
                   uint threadgroup_position_in_grid            [[threadgroup_position_in_grid]],
-                  uint threadgroups_per_grid                   [[threadgroups_per_grid]], 
-                  uint threads_per_simdgroup                   [[threads_per_simdgroup]], 
+                  uint threadgroups_per_grid                   [[threadgroups_per_grid]],
                   uint threads_per_threadgroup                 [[threads_per_threadgroup]])
 {
     result[thread_position_in_grid] = X[thread_position_in_grid] + 1.0;
@@ -95,7 +94,7 @@ kernel void inspector(
         store[15] = thread_position_in_threadgroup;
         store[16] = threadgroup_position_in_grid;
         store[17] = threadgroups_per_grid;
-        store[18] = threads_per_simdgroup;
+        store[18] = thread_execution_width; // threads_per_simdgroup removed (alias of thread_execution_width)
         store[19] = threads_per_threadgroup;
     }
 

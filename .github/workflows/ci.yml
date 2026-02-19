@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build & test (Apple Silicon, Metal)
+    # macos-14 = M1 runner — actual Apple Silicon hardware, Metal compute works.
+    # macos-15 also works but currently 10x more expensive on GitHub's billing.
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # libomp enables OpenMP fallback for CPU benchmarks.
+      # cmake from Homebrew ensures a recent enough version (3.21+).
+      - name: Install dependencies
+        run: brew install cmake libomp
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+
+      # Ensure the Metal shader compiler is accessible via xcrun.
+      # This is a no-op on runners that already have Xcode configured.
+      - name: Bootstrap Xcode
+        run: sudo xcodebuild -runFirstLaunch
+
+      - name: Configure CMake
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test (GPU)
+        run: cmake --build build --target test -- ARGS="--output-on-failure"
+
+  python-bindings:
+    name: Python bindings smoke test (Apple Silicon, Metal)
+    runs-on: macos-14
+    needs: build-and-test   # skip if the core build fails
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: brew install cmake libomp
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+
+      - name: Bootstrap Xcode
+        run: sudo xcodebuild -runFirstLaunch
+
+      - name: Set up Python venv
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet numpy pybind11
+
+      - name: Configure & build with pybind11
+        run: |
+          PYBIND11_DIR=$(.venv/bin/python3 -c "import pybind11; print(pybind11.get_cmake_dir())")
+          cmake -B build -Dpybind11_DIR="$PYBIND11_DIR"
+          cmake --build build --parallel
+
+      - name: Smoke test Python bindings
+        run: |
+          .venv/bin/python3 - <<'EOF'
+          import sys
+          sys.path.insert(0, "build")
+          import numpy as np
+          import m1_gpu_ops as metal
+
+          ctx = metal.MetalContext()
+          ctx.load_library("build/02-GeneralArrayOperations/ops.metallib")
+          ctx.load_library("build/03-2DKernels/ops.metallib")
+          ctx.load_library("build/04-Compute/ops.metallib")
+          ctx.load_library("build/05-WavePropagation/ops.metallib")
+
+          # 1D ops
+          x = np.ones(1024, dtype=np.float32)
+          y = np.ones(1024, dtype=np.float32) * 2
+          assert np.allclose(metal.add_arrays(ctx, x, y), 3), "add_arrays failed"
+          assert np.allclose(metal.saxpy(ctx, 2.0, x, y), 4), "saxpy failed"
+
+          # 2D Laplacian
+          u = np.random.rand(64, 64).astype(np.float32)
+          lap = metal.laplacian2d(ctx, u)
+          assert lap.shape == (64, 64), "laplacian2d shape wrong"
+
+          # Mandelbrot
+          img = metal.mandelbrot(ctx, -2.0, 1.0, -1.5, 1.5, 128, 128, 256)
+          assert img.shape == (128, 128), "mandelbrot shape wrong"
+
+          # N-body (one step)
+          pos = np.random.rand(64, 2).astype(np.float32)
+          vel = np.zeros((64, 2), dtype=np.float32)
+          mass = np.ones(64, dtype=np.float32)
+          pos2, vel2 = metal.nbody_step(ctx, pos, vel, mass, dt=0.01, G=1.0, softening=0.1)
+          assert pos2.shape == pos.shape, "nbody_step shape wrong"
+
+          # Elastic wave (small grid, few steps)
+          nx, nz = 50, 50
+          vp  = np.full((nx, nz), 3000.0, dtype=np.float32)
+          vs  = np.full((nx, nz), 1800.0, dtype=np.float32)
+          rho = np.full((nx, nz), 2700.0, dtype=np.float32)
+          wvl = np.zeros(20, dtype=np.float32); wvl[5] = 1.0
+          rx  = np.array([30, 35, 40], dtype=np.int32)
+          rz  = np.array([25, 25, 25], dtype=np.int32)
+          sv, sz, _, _ = metal.elastic_wave_propagate(
+              ctx, vp, vs, rho, 25, 10, wvl, rx, rz,
+              dx=10.0, dz=10.0, dt=1e-3, n_boundary=5
+          )
+          assert sv.shape == (20, 3), f"seismogram shape wrong: {sv.shape}"
+
+          print("All smoke tests passed.")
+          EOF
