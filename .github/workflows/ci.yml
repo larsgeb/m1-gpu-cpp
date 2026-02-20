@@ -116,7 +116,7 @@ jobs:
               ctx, vp, vs, rho, 25, 10, wvl, rx, rz,
               dx=10.0, dz=10.0, dt=1e-3, n_boundary=5
           )
-          assert sv.shape == (20, 3), f"seismogram shape wrong: {sv.shape}"
+          assert sv.shape == (3, 20), f"seismogram shape wrong: {sv.shape}"
 
           print("All smoke tests passed.")
           EOF
