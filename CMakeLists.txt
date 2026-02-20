@@ -194,9 +194,8 @@ compile_metal_shader(
 # =============================================================================
 enable_testing()
 
-add_executable(test_01_adder tests/test_01_adder.cpp 01-MetalAdder/MetalAdder.cpp)
+add_executable(test_01_adder tests/test_01_adder.cpp)
 configure_metal_target(test_01_adder)
-target_include_directories(test_01_adder PRIVATE "${CMAKE_SOURCE_DIR}/01-MetalAdder")
 add_dependencies(test_01_adder metallib_01)
 set_target_properties(test_01_adder PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/01-MetalAdder"
@@ -204,8 +203,6 @@ set_target_properties(test_01_adder PROPERTIES
 add_test(NAME test_01_adder COMMAND test_01_adder
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/01-MetalAdder"
 )
-# newDefaultLibrary() doesn't work on the CI paravirtual GPU; skip gracefully.
-set_tests_properties(test_01_adder PROPERTIES SKIP_RETURN_CODE 77)
 
 add_executable(test_02_1d_ops
     tests/test_02_1d_ops.cpp
