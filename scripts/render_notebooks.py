@@ -161,6 +161,22 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
+    # Pre-warm the matplotlib font cache.
+    #   Building the cache takes 30-60 s on a fresh CI runner and happens
+    #   inside `import matplotlib.pyplot as plt`.  When this coincides with
+    #   Metal initialisation in the same subprocess the process can crash
+    #   (SIGSEGV).  Running the import here — in the parent, which never
+    #   touches Metal — writes the cache to disk so that every notebook
+    #   subprocess finds it ready and skips the slow build entirely.
+    # ------------------------------------------------------------------
+    print("Pre-warming matplotlib font cache ...", flush=True)
+    import matplotlib.pyplot as _plt  # noqa: PLC0415
+    _plt.figure()
+    _plt.close("all")
+    del _plt
+    print("  font cache ready.", flush=True)
+
+    # ------------------------------------------------------------------
     # Phase 1 — execute each notebook in an isolated subprocess.
     #   If the subprocess crashes (e.g. SIGSEGV / exit 139), we write a
     #   minimal error notebook so that nbconvert always has something to
