@@ -82,6 +82,9 @@ def execute_notebook(py_path: Path) -> nbformat.NotebookNode:
         if not src:
             continue
 
+        preview = src.splitlines()[0][:55]
+        print(f"  [cell {exec_count} exec ] {preview}", file=sys.__stdout__, flush=True)
+
         cell_images.clear()
         stdout_buf = io.StringIO()
 
@@ -100,6 +103,8 @@ def execute_notebook(py_path: Path) -> nbformat.NotebookNode:
         finally:
             sys.stdout = sys.__stdout__
 
+        print(f"  [cell {exec_count} done ]", file=sys.__stdout__, flush=True)
+
         if not plt_ref and "plt" in ns:
             plt_ref.append(ns["plt"])
             plt_ref[0].show = _patched_show
@@ -111,7 +116,9 @@ def execute_notebook(py_path: Path) -> nbformat.NotebookNode:
             )
 
         if plt_ref:
+            print(f"  [cell {exec_count} figs ]", file=sys.__stdout__, flush=True)
             cell_images.extend(_capture_and_close(plt_ref[0]))
+            print(f"  [cell {exec_count} figs done]", file=sys.__stdout__, flush=True)
 
         for img_b64 in cell_images:
             cell.outputs.append(
