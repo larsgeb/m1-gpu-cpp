@@ -26,6 +26,7 @@
 
 # +
 import sys, os
+
 sys.path.insert(0, os.path.join(os.getcwd(), "build"))
 
 import numpy as np
@@ -67,17 +68,23 @@ alpha = 2.5
 # Addition: x + y
 gpu_add = metal.add_arrays(ctx_1d, x, y)
 cpu_add = x + y
-print(f"add_arrays  — max error: {np.max(np.abs(gpu_add - cpu_add)):.2e}  {'PASS' if np.allclose(gpu_add, cpu_add) else 'FAIL'}")
+print(
+    f"add_arrays  — max error: {np.max(np.abs(gpu_add - cpu_add)):.2e}  {'PASS' if np.allclose(gpu_add, cpu_add) else 'FAIL'}"
+)
 
 # Multiplication: x * y
 gpu_mul = metal.multiply_arrays(ctx_1d, x, y)
 cpu_mul = x * y
-print(f"multiply    — max error: {np.max(np.abs(gpu_mul - cpu_mul)):.2e}  {'PASS' if np.allclose(gpu_mul, cpu_mul) else 'FAIL'}")
+print(
+    f"multiply    — max error: {np.max(np.abs(gpu_mul - cpu_mul)):.2e}  {'PASS' if np.allclose(gpu_mul, cpu_mul) else 'FAIL'}"
+)
 
 # SAXPY: alpha * x + y
 gpu_saxpy = metal.saxpy(ctx_1d, alpha, x, y)
 cpu_saxpy = alpha * x + y
-print(f"saxpy       — max error: {np.max(np.abs(gpu_saxpy - cpu_saxpy)):.2e}  {'PASS' if np.allclose(gpu_saxpy, cpu_saxpy) else 'FAIL'}")
+print(
+    f"saxpy       — max error: {np.max(np.abs(gpu_saxpy - cpu_saxpy)):.2e}  {'PASS' if np.allclose(gpu_saxpy, cpu_saxpy) else 'FAIL'}"
+)
 
 
 # -
@@ -85,6 +92,7 @@ print(f"saxpy       — max error: {np.max(np.abs(gpu_saxpy - cpu_saxpy)):.2e}  
 # ## 3. GPU vs NumPy Benchmarks — 1D Operations
 #
 # We benchmark Metal GPU against NumPy (which uses Accelerate/BLAS on macOS) across varying array sizes. The GPU has overhead for small arrays but should win on large ones.
+
 
 # +
 def benchmark(func, *args, repeats=100, warmup=15):
@@ -99,7 +107,18 @@ def benchmark(func, *args, repeats=100, warmup=15):
         times.append((t1 - t0) * 1e6)  # microseconds
     return np.median(times), np.std(times)
 
-sizes = [1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 50_000_000,]
+
+sizes = [
+    1,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    50_000_000,
+]
 ops = {
     "add": {
         "gpu": lambda x, y: metal.add_arrays(ctx_1d, x, y),
@@ -204,17 +223,24 @@ plt.show()
 #
 # For 2D stencil operations, the GPU dispatch uses a 2D thread grid that maps directly to the array dimensions. Let's benchmark against a NumPy implementation of the same 5-point stencil.
 
+
 # +
 def numpy_laplacian5(X):
     """NumPy 5-point Laplacian stencil."""
     result = np.zeros_like(X)
-    result[1:-1, 1:-1] = (
-        X[:-2, 1:-1] + X[2:, 1:-1] + X[1:-1, :-2] + X[1:-1, 2:] - 4 * X[1:-1, 1:-1]
-    )
+    result[1:-1, 1:-1] = X[:-2, 1:-1] + X[2:, 1:-1] + X[1:-1, :-2] + X[1:-1, 2:] - 4 * X[1:-1, 1:-1]
     return result
 
-grid_sizes = [(64, 64), (128, 128), (256, 256), (512, 512),
-              (1024, 1024), (2048, 2048), (4000, 4000)]
+
+grid_sizes = [
+    (64, 64),
+    (128, 128),
+    (256, 256),
+    (512, 512),
+    (1024, 1024),
+    (2048, 2048),
+    (4000, 4000),
+]
 
 gpu_times = []
 numpy_times = []
@@ -230,7 +256,9 @@ for r, c in grid_sizes:
     numpy_times.append(t_np)
     labels.append(f"{r}x{c}")
     total_elements = r * c
-    print(f"  {r:>5d} x {c:<5d} ({total_elements:>12,d} elements)  GPU: {t_gpu:>10.0f} us   NumPy: {t_np:>10.0f} us   speedup: {t_np/t_gpu:.1f}x")
+    print(
+        f"  {r:>5d} x {c:<5d} ({total_elements:>12,d} elements)  GPU: {t_gpu:>10.0f} us   NumPy: {t_np:>10.0f} us   speedup: {t_np / t_gpu:.1f}x"
+    )
 
 # +
 total_elements = [r * c for r, c in grid_sizes]
@@ -266,9 +294,9 @@ plt.show()
 # Initial condition: hot spot in the center of a 512x512 grid
 N = 512
 u = np.zeros((N, N), dtype=np.float32)
-u[N//2-20:N//2+20, N//2-20:N//2+20] = 1.0  # hot square
+u[N // 2 - 20 : N // 2 + 20, N // 2 - 20 : N // 2 + 20] = 1.0  # hot square
 
-dt = 0.1       # time step
+dt = 0.1  # time step
 n_steps = 500  # number of iterations
 
 # Store snapshots for visualization
@@ -283,7 +311,9 @@ for step in range(1, n_steps + 1):
     if step in snapshot_steps:
         snapshots.append(u.copy())
 elapsed = time.perf_counter() - t0
-print(f"Ran {n_steps} diffusion steps on {N}x{N} grid in {elapsed:.2f}s ({elapsed/n_steps*1e3:.1f} ms/step)")
+print(
+    f"Ran {n_steps} diffusion steps on {N}x{N} grid in {elapsed:.2f}s ({elapsed / n_steps * 1e3:.1f} ms/step)"
+)
 
 fig, axes = plt.subplots(1, len(snapshots), figsize=(16, 3.5))
 for ax, snap, step in zip(axes, snapshots, [0] + snapshot_steps):
@@ -351,6 +381,7 @@ plt.show()
 #
 # NumPy must either use a slow Python loop or an awkward mask-based vectorization. The GPU runs all pixels in parallel.
 
+
 # +
 def logn1p(x, n=2):
     y = np.asarray(x, dtype=np.float64)
@@ -358,12 +389,13 @@ def logn1p(x, n=2):
         y = np.log1p(np.maximum(y, 0.0))  # defined at 0, ignores negatives
     return y
 
+
 def logstar(x, base=np.e, threshold=1.0):
     x = np.asarray(x, dtype=np.float64)
     if base == np.e:
         logf = np.log
     else:
-        logf = lambda z: np.log(z)/np.log(base)
+        logf = lambda z: np.log(z) / np.log(base)
 
     k = np.zeros_like(x, dtype=np.int64)
     y = x.copy()
@@ -374,6 +406,7 @@ def logstar(x, base=np.e, threshold=1.0):
         m = y > threshold
     return k
 
+
 # Load compute-heavy kernels
 ctx_compute = metal.MetalContext()
 ctx_compute.load_library("build/04-Compute/ops.metallib")
@@ -382,18 +415,16 @@ print(f"Compute library loaded on: {ctx_compute.device_name}")
 # GPU Mandelbrot — single dispatch
 width, height = 2048, 2048
 t0 = time.perf_counter()
-mandel_gpu = metal.mandelbrot(ctx_compute, width, height,
-                               x_min=-2.0, x_max=1.0,
-                               y_min=-1.5, y_max=1.5,
-                               max_iter=1000000)
+mandel_gpu = metal.mandelbrot(
+    ctx_compute, width, height, x_min=-2.0, x_max=1.0, y_min=-1.5, y_max=1.5, max_iter=1000000
+)
 t_gpu = time.perf_counter() - t0
 
 fig, ax = plt.subplots(figsize=(8, 8))
-ax.imshow(logn1p(mandel_gpu, n=50), cmap="inferno",
-          extent=[-2, 1, -1.5, 1.5], origin="lower")
+ax.imshow(logn1p(mandel_gpu, n=50), cmap="inferno", extent=[-2, 1, -1.5, 1.5], origin="lower")
 ax.set_xlabel("Re(c)")
 ax.set_ylabel("Im(c)")
-ax.set_title(f"Mandelbrot Set — {width}x{height}, max_iter=1000\nGPU time: {t_gpu*1e3:.1f} ms")
+ax.set_title(f"Mandelbrot Set — {width}x{height}, max_iter=1000\nGPU time: {t_gpu * 1e3:.1f} ms")
 plt.tight_layout()
 plt.show()
 
@@ -420,6 +451,7 @@ def mandelbrot_numpy(width, height, x_min, x_max, y_min, y_max, max_iter):
     result[mask] = max_iter
     return result
 
+
 # Benchmark across resolutions and max_iter values
 configs = [
     (512, 512, 200),
@@ -434,23 +466,29 @@ labels_m = []
 
 for w, h, mi in configs:
     # GPU
-    t_g, _ = benchmark(metal.mandelbrot, ctx_compute, w, h,
-                       -2.0, 1.0, -1.5, 1.5, mi, repeats=5, warmup=2)
+    t_g, _ = benchmark(
+        metal.mandelbrot, ctx_compute, w, h, -2.0, 1.0, -1.5, 1.5, mi, repeats=5, warmup=2
+    )
     # NumPy
-    t_n, _ = benchmark(mandelbrot_numpy, w, h,
-                       -2.0, 1.0, -1.5, 1.5, mi, repeats=3, warmup=1)
+    t_n, _ = benchmark(mandelbrot_numpy, w, h, -2.0, 1.0, -1.5, 1.5, mi, repeats=3, warmup=1)
     gpu_times_m.append(t_g)
     numpy_times_m.append(t_n)
     labels_m.append(f"{w}x{h}\niter={mi}")
-    print(f"  {w}x{h} max_iter={mi:>4d}  GPU: {t_g/1e3:>8.1f} ms   NumPy: {t_n/1e3:>8.1f} ms   speedup: {t_n/t_g:.0f}x")
+    print(
+        f"  {w}x{h} max_iter={mi:>4d}  GPU: {t_g / 1e3:>8.1f} ms   NumPy: {t_n / 1e3:>8.1f} ms   speedup: {t_n / t_g:.0f}x"
+    )
 
 # +
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
 
 x_pos = np.arange(len(labels_m))
 bar_w = 0.35
-ax1.bar(x_pos - bar_w/2, [t/1e3 for t in gpu_times_m], bar_w, label="Metal GPU", color="#FF6B35")
-ax1.bar(x_pos + bar_w/2, [t/1e3 for t in numpy_times_m], bar_w, label="NumPy (CPU)", color="#004E89")
+ax1.bar(
+    x_pos - bar_w / 2, [t / 1e3 for t in gpu_times_m], bar_w, label="Metal GPU", color="#FF6B35"
+)
+ax1.bar(
+    x_pos + bar_w / 2, [t / 1e3 for t in numpy_times_m], bar_w, label="NumPy (CPU)", color="#004E89"
+)
 ax1.set_xticks(x_pos)
 ax1.set_xticklabels(labels_m, fontsize=9)
 ax1.set_ylabel("Time (ms)")
@@ -486,6 +524,7 @@ plt.show()
 # - `nbody_step(ctx, pos_mass, velocities, dt, softening)` — single step, returns new arrays
 # - `nbody_simulate(ctx, pos_mass, velocities, dt, softening, n_steps)` — multi-step, data stays on GPU
 
+
 # +
 # Set up initial conditions: particles in a disk with slight rotation
 def make_galaxy(N, seed=42):
@@ -508,6 +547,7 @@ def make_galaxy(N, seed=42):
     velocities[:, 1] = v_circ * np.cos(theta) * 0.5
     return pos_mass, velocities
 
+
 # Visualize a short simulation
 N_vis = 2048
 pos, vel = make_galaxy(N_vis)
@@ -517,26 +557,34 @@ dt = 0.005
 
 # Run simulation — data stays on GPU for all steps
 t0 = time.perf_counter()
-pos_final, vel_final = metal.nbody_simulate(ctx_compute, pos, vel,
-                                             dt=dt, softening=0.05, n_steps=n_steps)
+pos_final, vel_final = metal.nbody_simulate(
+    ctx_compute, pos, vel, dt=dt, softening=0.05, n_steps=n_steps
+)
 t_sim = time.perf_counter() - t0
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
 ax1.scatter(pos[:, 0], pos[:, 1], s=0.5, alpha=0.5, c="steelblue")
-ax1.set_xlim(-5, 5); ax1.set_ylim(-5, 5)
+ax1.set_xlim(-5, 5)
+ax1.set_ylim(-5, 5)
 ax1.set_aspect("equal")
 ax1.set_title("Initial positions")
-ax1.set_xlabel("x"); ax1.set_ylabel("y")
+ax1.set_xlabel("x")
+ax1.set_ylabel("y")
 
 ax2.scatter(pos_final[:, 0], pos_final[:, 1], s=0.5, alpha=0.5, c="coral")
-ax2.set_xlim(-5, 5); ax2.set_ylim(-5, 5)
+ax2.set_xlim(-5, 5)
+ax2.set_ylim(-5, 5)
 ax2.set_aspect("equal")
 ax2.set_title(f"After {n_steps} steps")
-ax2.set_xlabel("x"); ax2.set_ylabel("y")
+ax2.set_xlabel("x")
+ax2.set_ylabel("y")
 
-fig.suptitle(f"N-body: {N_vis} particles, {n_steps} steps in {t_sim:.2f}s "
-             f"({t_sim/n_steps*1e3:.1f} ms/step)", fontweight="bold")
+fig.suptitle(
+    f"N-body: {N_vis} particles, {n_steps} steps in {t_sim:.2f}s "
+    f"({t_sim / n_steps * 1e3:.1f} ms/step)",
+    fontweight="bold",
+)
 fig.tight_layout()
 plt.show()
 
@@ -545,14 +593,14 @@ plt.show()
 def nbody_step_numpy(pos_mass, velocities, dt, softening):
     """Vectorized NumPy N-body: O(N²) pairwise forces + leapfrog integration."""
     N = pos_mass.shape[0]
-    pos = pos_mass[:, :3]   # (N, 3)
-    mass = pos_mass[:, 3]   # (N,)
+    pos = pos_mass[:, :3]  # (N, 3)
+    mass = pos_mass[:, 3]  # (N,)
 
     # All-pairs displacement: diff[i,j] = pos[j] - pos[i]
     diff = pos[np.newaxis, :, :] - pos[:, np.newaxis, :]  # (N, N, 3)
-    dist_sq = np.sum(diff ** 2, axis=2) + softening ** 2   # (N, N)
+    dist_sq = np.sum(diff**2, axis=2) + softening**2  # (N, N)
     inv_dist = 1.0 / np.sqrt(dist_sq)
-    inv_dist3 = inv_dist ** 3
+    inv_dist3 = inv_dist**3
 
     # Acceleration: a_i = sum_j m_j * (r_j - r_i) / |r_ij|^3
     acc = np.sum(diff * (mass[np.newaxis, :, np.newaxis] * inv_dist3[:, :, np.newaxis]), axis=1)
@@ -563,6 +611,7 @@ def nbody_step_numpy(pos_mass, velocities, dt, softening):
     pos_new[:, :3] += vel_new[:, :3] * dt
     return pos_new, vel_new
 
+
 # Benchmark: GPU single-step vs NumPy single-step at various N
 particle_counts = [256, 512, 1024, 2048, 4096, 8192]
 gpu_times_nb = []
@@ -572,25 +621,37 @@ for N in particle_counts:
     pos, vel = make_galaxy(N)
 
     # GPU
-    t_g, _ = benchmark(metal.nbody_step, ctx_compute, pos, vel,
-                       0.001, 0.05, repeats=5, warmup=2)
+    t_g, _ = benchmark(metal.nbody_step, ctx_compute, pos, vel, 0.001, 0.05, repeats=5, warmup=2)
     gpu_times_nb.append(t_g)
 
     # NumPy — fewer repeats because it's expensive
     reps = max(1, min(5, int(2e7 / (N * N))))
-    t_n, _ = benchmark(nbody_step_numpy, pos, vel, 0.001, 0.05,
-                       repeats=reps, warmup=1)
+    t_n, _ = benchmark(nbody_step_numpy, pos, vel, 0.001, 0.05, repeats=reps, warmup=1)
     numpy_times_nb.append(t_n)
 
-    print(f"  N = {N:>5d}  GPU: {t_g/1e3:>8.1f} ms   NumPy: {t_n/1e3:>8.1f} ms   speedup: {t_n/t_g:.0f}x")
+    print(
+        f"  N = {N:>5d}  GPU: {t_g / 1e3:>8.1f} ms   NumPy: {t_n / 1e3:>8.1f} ms   speedup: {t_n / t_g:.0f}x"
+    )
 
 # +
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
 
-ax1.loglog(particle_counts, [t/1e3 for t in gpu_times_nb], "o-",
-           label="Metal GPU", color="#FF6B35", linewidth=2)
-ax1.loglog(particle_counts, [t/1e3 for t in numpy_times_nb], "s--",
-           label="NumPy (CPU)", color="#004E89", linewidth=2)
+ax1.loglog(
+    particle_counts,
+    [t / 1e3 for t in gpu_times_nb],
+    "o-",
+    label="Metal GPU",
+    color="#FF6B35",
+    linewidth=2,
+)
+ax1.loglog(
+    particle_counts,
+    [t / 1e3 for t in numpy_times_nb],
+    "s--",
+    label="NumPy (CPU)",
+    color="#004E89",
+    linewidth=2,
+)
 ax1.set_xlabel("Number of particles (N)")
 ax1.set_ylabel("Time per step (ms)")
 ax1.set_title("N-body Forces: Absolute Times", fontweight="bold")
@@ -600,8 +661,14 @@ ax1.grid(True, alpha=0.3, which="both")
 speedups_nb = [n / g for n, g in zip(numpy_times_nb, gpu_times_nb)]
 ax2.semilogx(particle_counts, speedups_nb, "D-", color="#2D936C", linewidth=2, markersize=8)
 for x, s in zip(particle_counts, speedups_nb):
-    ax2.annotate(f"{s:.0f}x", (x, s), textcoords="offset points",
-                 xytext=(0, 10), ha="center", fontweight="bold")
+    ax2.annotate(
+        f"{s:.0f}x",
+        (x, s),
+        textcoords="offset points",
+        xytext=(0, 10),
+        ha="center",
+        fontweight="bold",
+    )
 ax2.axhline(y=1, color="gray", linestyle=":", alpha=0.5)
 ax2.set_xlabel("Number of particles (N)")
 ax2.set_ylabel("Speedup (NumPy / GPU)")
@@ -629,15 +696,18 @@ ctx_diffuse = metal.MetalContext()
 ctx_diffuse.load_library("build/02-GeneralArrayOperations/ops.metallib")
 ctx_diffuse.load_library("build/03-2DKernels/ops.metallib")
 
+
 def diffuse_numpy(field, dt, n_steps):
     """Pure NumPy diffusion: forward Euler with 5-point Laplacian."""
     u = field.copy()
     for _ in range(n_steps):
         lap = np.zeros_like(u)
-        lap[1:-1, 1:-1] = (u[:-2, 1:-1] + u[2:, 1:-1] +
-                            u[1:-1, :-2] + u[1:-1, 2:] - 4 * u[1:-1, 1:-1])
+        lap[1:-1, 1:-1] = (
+            u[:-2, 1:-1] + u[2:, 1:-1] + u[1:-1, :-2] + u[1:-1, 2:] - 4 * u[1:-1, 1:-1]
+        )
         u += dt * lap
     return u
+
 
 def diffuse_python_loop(ctx, field, dt, n_steps):
     """Per-call GPU diffusion (from section 6): Python loop calling GPU each step."""
@@ -646,6 +716,7 @@ def diffuse_python_loop(ctx, field, dt, n_steps):
         lap = metal.laplacian2d(ctx, u)
         u = metal.saxpy(ctx, dt, lap.ravel(), u.ravel()).reshape(u.shape)
     return u
+
 
 # Benchmark: diffuse_steps (C++ loop) vs Python-loop GPU vs NumPy
 grid_size = 512
@@ -658,33 +729,52 @@ numpy_diff = []
 
 for ns in n_steps_list:
     field = np.zeros((grid_size, grid_size), dtype=np.float32)
-    field[grid_size//2-20:grid_size//2+20, grid_size//2-20:grid_size//2+20] = 1.0
+    field[grid_size // 2 - 20 : grid_size // 2 + 20, grid_size // 2 - 20 : grid_size // 2 + 20] = (
+        1.0
+    )
 
-    t_fused, _ = benchmark(metal.diffuse_steps, ctx_diffuse, field, dt, ns,
-                           repeats=3, warmup=1)
+    t_fused, _ = benchmark(metal.diffuse_steps, ctx_diffuse, field, dt, ns, repeats=3, warmup=1)
     gpu_fused.append(t_fused)
 
-    t_pyloop, _ = benchmark(diffuse_python_loop, ctx_diffuse, field, dt, ns,
-                            repeats=3, warmup=1)
+    t_pyloop, _ = benchmark(diffuse_python_loop, ctx_diffuse, field, dt, ns, repeats=3, warmup=1)
     gpu_pyloop.append(t_pyloop)
 
-    t_np, _ = benchmark(diffuse_numpy, field, dt, ns,
-                        repeats=3, warmup=1)
+    t_np, _ = benchmark(diffuse_numpy, field, dt, ns, repeats=3, warmup=1)
     numpy_diff.append(t_np)
 
-    print(f"  {ns:>4d} steps: C++ loop {t_fused/1e3:>8.1f} ms | "
-          f"Py loop {t_pyloop/1e3:>8.1f} ms ({t_pyloop/t_fused:.1f}x slower) | "
-          f"NumPy {t_np/1e3:>8.1f} ms (GPU fused {t_np/t_fused:.1f}x faster)")
+    print(
+        f"  {ns:>4d} steps: C++ loop {t_fused / 1e3:>8.1f} ms | "
+        f"Py loop {t_pyloop / 1e3:>8.1f} ms ({t_pyloop / t_fused:.1f}x slower) | "
+        f"NumPy {t_np / 1e3:>8.1f} ms (GPU fused {t_np / t_fused:.1f}x faster)"
+    )
 
 # +
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
 
-ax1.loglog(n_steps_list, [t/1e3 for t in gpu_fused], "o-",
-           label="GPU C++ loop (diffuse_steps)", color="#FF6B35", linewidth=2)
-ax1.loglog(n_steps_list, [t/1e3 for t in gpu_pyloop], "^--",
-           label="GPU Python loop", color="#9B59B6", linewidth=2)
-ax1.loglog(n_steps_list, [t/1e3 for t in numpy_diff], "s--",
-           label="NumPy (CPU)", color="#004E89", linewidth=2)
+ax1.loglog(
+    n_steps_list,
+    [t / 1e3 for t in gpu_fused],
+    "o-",
+    label="GPU C++ loop (diffuse_steps)",
+    color="#FF6B35",
+    linewidth=2,
+)
+ax1.loglog(
+    n_steps_list,
+    [t / 1e3 for t in gpu_pyloop],
+    "^--",
+    label="GPU Python loop",
+    color="#9B59B6",
+    linewidth=2,
+)
+ax1.loglog(
+    n_steps_list,
+    [t / 1e3 for t in numpy_diff],
+    "s--",
+    label="NumPy (CPU)",
+    color="#004E89",
+    linewidth=2,
+)
 ax1.set_xlabel("Number of diffusion steps")
 ax1.set_ylabel("Total time (ms)")
 ax1.set_title(f"Diffusion on {grid_size}x{grid_size} grid", fontweight="bold")
@@ -693,8 +783,18 @@ ax1.grid(True, alpha=0.3, which="both")
 
 sp_vs_numpy = [n / g for n, g in zip(numpy_diff, gpu_fused)]
 sp_vs_pyloop = [p / g for p, g in zip(gpu_pyloop, gpu_fused)]
-ax2.plot(n_steps_list, sp_vs_numpy, "D-", label="vs NumPy", color="#2D936C", linewidth=2, markersize=8)
-ax2.plot(n_steps_list, sp_vs_pyloop, "o--", label="vs GPU Python loop", color="#9B59B6", linewidth=2, markersize=8)
+ax2.plot(
+    n_steps_list, sp_vs_numpy, "D-", label="vs NumPy", color="#2D936C", linewidth=2, markersize=8
+)
+ax2.plot(
+    n_steps_list,
+    sp_vs_pyloop,
+    "o--",
+    label="vs GPU Python loop",
+    color="#9B59B6",
+    linewidth=2,
+    markersize=8,
+)
 ax2.axhline(y=1, color="gray", linestyle=":", alpha=0.5)
 ax2.set_xlabel("Number of diffusion steps")
 ax2.set_ylabel("Speedup over diffuse_steps")

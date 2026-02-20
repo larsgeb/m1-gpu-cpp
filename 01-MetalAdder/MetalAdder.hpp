@@ -13,7 +13,13 @@ A class to manage all of the Metal objects this app creates.
 #include "Metal/Metal.hpp"
 
 // The number of floats in each array, and the size of the arrays in bytes.
-const unsigned int arrayLength = 60 * 180 * 10000;
+// The test binary overrides this via -DMETAL_ADDER_ARRAY_LENGTH=N so it can
+// run a small dispatch that completes on the CI paravirtual GPU.
+#ifndef METAL_ADDER_ARRAY_LENGTH
+const unsigned int arrayLength = 60 * 180 * 10000; // original Apple sample size
+#else
+const unsigned int arrayLength = METAL_ADDER_ARRAY_LENGTH;
+#endif
 
 const unsigned int bufferSize = arrayLength * sizeof(float);
 

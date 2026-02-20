@@ -204,8 +204,6 @@ set_target_properties(test_01_adder PROPERTIES
 add_test(NAME test_01_adder COMMAND test_01_adder
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/01-MetalAdder"
 )
-# Exit code 77 means "skip" — used when the device is paravirtual (CI VM).
-set_tests_properties(test_01_adder PROPERTIES SKIP_RETURN_CODE 77)
 
 add_executable(test_02_1d_ops
     tests/test_02_1d_ops.cpp

@@ -30,6 +30,7 @@
 
 # +
 import sys, os
+
 sys.path.insert(0, os.path.join(os.getcwd(), "build"))
 
 import numpy as np
@@ -52,6 +53,7 @@ print(f"GPU device: {ctx.device_name}")
 # The Ricker wavelet (Mexican hat) is the standard source time function for seismic modelling.
 # Peak frequency $f_0$ controls the dominant wavelength.
 
+
 # +
 def ricker_wavelet(nt, dt, f0, t0=None):
     """Ricker (Mexican hat) wavelet centered at t0 with peak frequency f0."""
@@ -59,8 +61,9 @@ def ricker_wavelet(nt, dt, f0, t0=None):
         t0 = 1.5 / f0
     t = np.arange(nt) * dt
     tau = t - t0
-    w = (1.0 - 2.0 * (np.pi * f0 * tau)**2) * np.exp(-(np.pi * f0 * tau)**2)
+    w = (1.0 - 2.0 * (np.pi * f0 * tau) ** 2) * np.exp(-((np.pi * f0 * tau) ** 2))
     return w.astype(np.float32)
+
 
 # Preview
 f0_demo = 15.0
@@ -68,7 +71,8 @@ dt_demo = 0.0001
 wav_demo = ricker_wavelet(2000, dt_demo, f0_demo)
 fig, ax = plt.subplots(figsize=(8, 2.5))
 ax.plot(np.arange(len(wav_demo)) * dt_demo * 1000, wav_demo, "k-", linewidth=1.5)
-ax.set_xlabel("Time (ms)"); ax.set_ylabel("Amplitude")
+ax.set_xlabel("Time (ms)")
+ax.set_ylabel("Amplitude")
 ax.set_title(f"Ricker wavelet, f0 = {f0_demo} Hz")
 ax.grid(True, alpha=0.3)
 fig.tight_layout()
@@ -86,24 +90,24 @@ plt.show()
 # +
 # Grid parameters
 nx, nz = 400, 400
-dx, dz = 5.0, 5.0   # meters
-f0 = 15.0            # peak frequency Hz
+dx, dz = 5.0, 5.0  # meters
+f0 = 15.0  # peak frequency Hz
 
 # Material properties
-vp_val = 3000.0      # m/s
-vs_val = 1700.0      # m/s
-rho_val = 2200.0     # kg/m^3
+vp_val = 3000.0  # m/s
+vs_val = 1700.0  # m/s
+rho_val = 2200.0  # kg/m^3
 
 # CFL stability condition: dt < min(dx,dz) / (sqrt(2) * vp_max)
 dt = 0.8 * min(dx, dz) / (np.sqrt(2.0) * vp_val)
 nt = 800
-print(f"dt = {dt*1e6:.1f} us, total time = {nt*dt*1e3:.1f} ms")
+print(f"dt = {dt * 1e6:.1f} us, total time = {nt * dt * 1e3:.1f} ms")
 
 wavelet = ricker_wavelet(nt, dt, f0)
 
 # Homogeneous model
-vp  = np.full((nx, nz), vp_val, dtype=np.float32)
-vs  = np.full((nx, nz), vs_val, dtype=np.float32)
+vp = np.full((nx, nz), vp_val, dtype=np.float32)
+vs = np.full((nx, nz), vs_val, dtype=np.float32)
 rho = np.full((nx, nz), rho_val, dtype=np.float32)
 
 # Source at center
@@ -117,15 +121,23 @@ print(f"Grid: {nx}x{nz}, {nt} time steps, {len(recv_z)} receivers")
 # Run simulation
 t0 = time.perf_counter()
 seis_vx, seis_vz, snap_vx, snap_vz = metal.elastic_wave_propagate(
-    ctx, vp, vs, rho,
-    src_x, src_z, wavelet,
-    recv_x, recv_z,
-    dx, dz, dt,
+    ctx,
+    vp,
+    vs,
+    rho,
+    src_x,
+    src_z,
+    wavelet,
+    recv_x,
+    recv_z,
+    dx,
+    dz,
+    dt,
     snapshot_interval=100,
-    n_boundary=30
+    n_boundary=30,
 )
 elapsed = time.perf_counter() - t0
-print(f"Completed in {elapsed:.2f}s ({elapsed/nt*1e3:.2f} ms/step)")
+print(f"Completed in {elapsed:.2f}s ({elapsed / nt * 1e3:.2f} ms/step)")
 
 # +
 # Wavefield snapshots
@@ -143,12 +155,14 @@ for col in range(n_show):
     step_num = (col + 1) * 100
     t_ms = step_num * dt * 1e3
 
-    axes[0, col].imshow(snap_vx[col], cmap="RdBu_r", vmin=-vmax_vx, vmax=vmax_vx,
-                        extent=extent, aspect="equal")
+    axes[0, col].imshow(
+        snap_vx[col], cmap="RdBu_r", vmin=-vmax_vx, vmax=vmax_vx, extent=extent, aspect="equal"
+    )
     axes[0, col].set_title(f"vx — t = {t_ms:.0f} ms")
 
-    axes[1, col].imshow(snap_vz[col], cmap="RdBu_r", vmin=-vmax_vz, vmax=vmax_vz,
-                        extent=extent, aspect="equal")
+    axes[1, col].imshow(
+        snap_vz[col], cmap="RdBu_r", vmin=-vmax_vz, vmax=vmax_vz, extent=extent, aspect="equal"
+    )
     axes[1, col].set_title(f"vz — t = {t_ms:.0f} ms")
 
 for ax in axes[:, 0]:
@@ -156,9 +170,10 @@ for ax in axes[:, 0]:
 for ax in axes[1, :]:
     ax.set_xlabel("z (m)")
 
-fig.suptitle(f"Elastic Wave Propagation — Homogeneous Medium\n"
-             f"vp = {vp_val:.0f} m/s, vs = {vs_val:.0f} m/s",
-             fontweight="bold")
+fig.suptitle(
+    f"Elastic Wave Propagation — Homogeneous Medium\nvp = {vp_val:.0f} m/s, vs = {vs_val:.0f} m/s",
+    fontweight="bold",
+)
 fig.tight_layout()
 plt.show()
 # -
@@ -170,8 +185,8 @@ plt.show()
 # +
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
-t_axis = np.arange(nt) * dt * 1000   # ms
-offsets = (recv_z - src_z) * dz       # meters from source
+t_axis = np.arange(nt) * dt * 1000  # ms
+offsets = (recv_z - src_z) * dz  # meters from source
 
 # Normalize and plot every 3rd trace
 scale_vx = np.max(np.abs(seis_vx)) * 0.3 if np.max(np.abs(seis_vx)) > 0 else 1.0
@@ -210,13 +225,13 @@ plt.show()
 
 # +
 # Two-layer model: faster layer below
-vp2  = np.full((nx, nz), 3000.0, dtype=np.float32)
-vs2  = np.full((nx, nz), 1700.0, dtype=np.float32)
+vp2 = np.full((nx, nz), 3000.0, dtype=np.float32)
+vs2 = np.full((nx, nz), 1700.0, dtype=np.float32)
 rho2 = np.full((nx, nz), 2200.0, dtype=np.float32)
 
 layer_top = nx // 2 + 40  # interface below center
-vp2[layer_top:, :]  = 4500.0
-vs2[layer_top:, :]  = 2600.0
+vp2[layer_top:, :] = 4500.0
+vs2[layer_top:, :] = 2600.0
 rho2[layer_top:, :] = 2800.0
 
 # Impedance contrast
@@ -235,12 +250,20 @@ recv_x2 = np.full(len(recv_z), nx // 4 + 30, dtype=np.int32)
 
 t0 = time.perf_counter()
 seis_vx2, seis_vz2, snap_vx2, snap_vz2 = metal.elastic_wave_propagate(
-    ctx, vp2, vs2, rho2,
-    src_x2, nz // 2, wavelet,
-    recv_x2, recv_z,
-    dx, dz, dt*0.75,
+    ctx,
+    vp2,
+    vs2,
+    rho2,
+    src_x2,
+    nz // 2,
+    wavelet,
+    recv_x2,
+    recv_z,
+    dx,
+    dz,
+    dt * 0.75,
     snapshot_interval=150,
-    n_boundary=30
+    n_boundary=30,
 )
 elapsed2 = time.perf_counter() - t0
 print(f"Completed in {elapsed2:.2f}s")
@@ -257,10 +280,8 @@ for col in range(n_show2):
     step_num = (col + 1) * 100
     t_ms = step_num * dt * 1e3
     ax = axes[col]
-    ax.imshow(snap_vz2[col], cmap="RdBu_r", vmin=-vmax2, vmax=vmax2,
-              extent=extent, aspect="equal")
-    ax.axhline(y=layer_top * dx, color="lime", linewidth=1.5, linestyle="--",
-               label="Interface")
+    ax.imshow(snap_vz2[col], cmap="RdBu_r", vmin=-vmax2, vmax=vmax2, extent=extent, aspect="equal")
+    ax.axhline(y=layer_top * dx, color="lime", linewidth=1.5, linestyle="--", label="Interface")
     ax.set_title(f"t = {t_ms:.0f} ms")
     ax.set_xlabel("z (m)")
 
@@ -290,8 +311,7 @@ for ax in (ax1, ax2):
 
 ax1.set_title("vx seismogram")
 ax2.set_title("vz seismogram")
-fig.suptitle("Seismograms — Layered Medium (direct + reflected + transmitted)",
-             fontweight="bold")
+fig.suptitle("Seismograms — Layered Medium (direct + reflected + transmitted)", fontweight="bold")
 fig.tight_layout()
 plt.show()
 
@@ -302,8 +322,8 @@ plt.show()
 #
 # We compare the Metal GPU elastic wave solver against a pure NumPy reference implementation at different grid sizes. The GPU solver keeps all data on GPU (unified memory) and dispatches kernels from a C++ loop. The NumPy solver uses vectorized stencil operations with Python loop over time steps.
 
-def elastic_wave_numpy(vp, vs, rho, src_x, src_z, wavelet,
-                       recv_x, recv_z, dx, dz, dt):
+
+def elastic_wave_numpy(vp, vs, rho, src_x, src_z, wavelet, recv_x, recv_z, dx, dz, dt):
     """Pure NumPy 2D elastic wave propagation (velocity-stress, staggered grid)."""
     nx, nz = vp.shape
     nt = len(wavelet)
@@ -316,8 +336,8 @@ def elastic_wave_numpy(vp, vs, rho, src_x, src_z, wavelet,
     buoy = 1.0 / rho
 
     # Wavefields
-    vx_f  = np.zeros((nx, nz), dtype=np.float32)
-    vz_f  = np.zeros((nx, nz), dtype=np.float32)
+    vx_f = np.zeros((nx, nz), dtype=np.float32)
+    vz_f = np.zeros((nx, nz), dtype=np.float32)
     sxx_f = np.zeros((nx, nz), dtype=np.float32)
     szz_f = np.zeros((nx, nz), dtype=np.float32)
     sxz_f = np.zeros((nx, nz), dtype=np.float32)
@@ -333,13 +353,12 @@ def elastic_wave_numpy(vp, vs, rho, src_x, src_z, wavelet,
         # Stress update — Hooke's Law
         dvx_dx = (vx_f[1:, :] - vx_f[:-1, :]) / dx
         dvz_dz = (vz_f[:, 1:] - vz_f[:, :-1]) / dz
-        sxx_f[1:, 1:] += dt * (lam2mu[1:, 1:] * dvx_dx[:, 1:] +
-                               lam[1:, 1:] * dvz_dz[1:, :])
-        szz_f[1:, 1:] += dt * (lam[1:, 1:] * dvx_dx[:, 1:] +
-                               lam2mu[1:, 1:] * dvz_dz[1:, :])
-        sxz_f[:-1, :-1] += dt * mu[:-1, :-1] * (
-            (vx_f[:-1, 1:] - vx_f[:-1, :-1]) / dz +
-            (vz_f[1:, :-1] - vz_f[:-1, :-1]) / dx
+        sxx_f[1:, 1:] += dt * (lam2mu[1:, 1:] * dvx_dx[:, 1:] + lam[1:, 1:] * dvz_dz[1:, :])
+        szz_f[1:, 1:] += dt * (lam[1:, 1:] * dvx_dx[:, 1:] + lam2mu[1:, 1:] * dvz_dz[1:, :])
+        sxz_f[:-1, :-1] += (
+            dt
+            * mu[:-1, :-1]
+            * ((vx_f[:-1, 1:] - vx_f[:-1, :-1]) / dz + (vz_f[1:, :-1] - vz_f[:-1, :-1]) / dx)
         )
 
         # Velocity update — Newton's Law
@@ -385,22 +404,23 @@ for gnx, gnz, gnt in bench_configs:
 
     # GPU
     t0 = time.perf_counter()
-    metal.elastic_wave_propagate(ctx, g_vp, g_vs, g_rho,
-                                 gnx // 4, gnz // 2, g_wav,
-                                 g_rx, g_rz, g_dx, g_dz, g_dt, 0, 20)
+    metal.elastic_wave_propagate(
+        ctx, g_vp, g_vs, g_rho, gnx // 4, gnz // 2, g_wav, g_rx, g_rz, g_dx, g_dz, g_dt, 0, 20
+    )
     t_g = time.perf_counter() - t0
     gpu_times_w.append(t_g)
 
     # NumPy
     t0 = time.perf_counter()
-    elastic_wave_numpy(g_vp, g_vs, g_rho, gnx // 4, gnz // 2, g_wav,
-                       g_rx, g_rz, g_dx, g_dz, g_dt)
+    elastic_wave_numpy(g_vp, g_vs, g_rho, gnx // 4, gnz // 2, g_wav, g_rx, g_rz, g_dx, g_dz, g_dt)
     t_n = time.perf_counter() - t0
     numpy_times_w.append(t_n)
 
-    print(f"  {gnx:>3d}x{gnz:<3d} {gnt:>4d} steps:  "
-          f"GPU {t_g:.3f}s  NumPy {t_n:.3f}s  "
-          f"speedup {t_n/t_g:.1f}x")
+    print(
+        f"  {gnx:>3d}x{gnz:<3d} {gnt:>4d} steps:  "
+        f"GPU {t_g:.3f}s  NumPy {t_n:.3f}s  "
+        f"speedup {t_n / t_g:.1f}x"
+    )
 
 # +
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
@@ -409,8 +429,8 @@ labels = [f"{c[0]}x{c[1]}\n{c[2]} steps" for c in bench_configs]
 x_pos = np.arange(len(labels))
 bar_w = 0.35
 
-ax1.bar(x_pos - bar_w/2, gpu_times_w, bar_w, label="Metal GPU", color="#FF6B35")
-ax1.bar(x_pos + bar_w/2, numpy_times_w, bar_w, label="NumPy (CPU)", color="#004E89")
+ax1.bar(x_pos - bar_w / 2, gpu_times_w, bar_w, label="Metal GPU", color="#FF6B35")
+ax1.bar(x_pos + bar_w / 2, numpy_times_w, bar_w, label="NumPy (CPU)", color="#004E89")
 ax1.set_xticks(x_pos)
 ax1.set_xticklabels(labels, fontsize=9)
 ax1.set_ylabel("Time (seconds)")
@@ -468,15 +488,23 @@ recv_x_hr = np.full_like(recv_z_hr, 50)
 print(f"Grid: {nx_hr}x{nz_hr}, {nt_hr} steps")
 t0 = time.perf_counter()
 seis_vx_hr, seis_vz_hr, snap_vx_hr, snap_vz_hr = metal.elastic_wave_propagate(
-    ctx, vp_hr, vs_hr, rho_hr,
-    80, nz_hr // 2, wav_hr,
-    recv_x_hr, recv_z_hr,
-    dx_hr, dz_hr, dt_hr,
+    ctx,
+    vp_hr,
+    vs_hr,
+    rho_hr,
+    80,
+    nz_hr // 2,
+    wav_hr,
+    recv_x_hr,
+    recv_z_hr,
+    dx_hr,
+    dz_hr,
+    dt_hr,
     snapshot_interval=200,
-    n_boundary=40
+    n_boundary=40,
 )
 elapsed_hr = time.perf_counter() - t0
-print(f"Completed in {elapsed_hr:.2f}s ({elapsed_hr/nt_hr*1e3:.2f} ms/step)")
+print(f"Completed in {elapsed_hr:.2f}s ({elapsed_hr / nt_hr * 1e3:.2f} ms/step)")
 
 # +
 n_show_hr = min(snap_vz_hr.shape[0], 4)
@@ -491,8 +519,14 @@ for col in range(n_show_hr):
     step_num = (col + 1) * 600
     t_ms = step_num * dt_hr * 1e3
     ax = axes[col]
-    ax.imshow(snap_vz_hr[col*3], cmap="RdBu_r", vmin=-vmax_hr, vmax=vmax_hr,
-              extent=extent_hr, aspect="equal")
+    ax.imshow(
+        snap_vz_hr[col * 3],
+        cmap="RdBu_r",
+        vmin=-vmax_hr,
+        vmax=vmax_hr,
+        extent=extent_hr,
+        aspect="equal",
+    )
     ax.axhline(y=l1 * dx_hr, color="lime", linewidth=1, linestyle="--")
     ax.axhline(y=l2 * dx_hr, color="cyan", linewidth=1, linestyle="--")
     ax.set_title(f"t = {t_ms:.0f} ms")

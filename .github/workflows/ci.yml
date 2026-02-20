@@ -39,6 +39,24 @@ jobs:
       - name: Test (GPU)
         run: cmake --build build --target test -- ARGS="--output-on-failure"
 
+  python-quality:
+    name: Python quality (Ruff + Ty)
+    # Runs on a plain Linux runner — no Metal device needed.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Ruff lint
+        run: uvx ruff check python/ demo.py wave_demo.py
+
+      - name: Ruff format check
+        run: uvx ruff format --check python/ demo.py wave_demo.py
+
+      - name: Ty type check
+        run: uvx ty check python/
+
   python-bindings:
     name: Python bindings smoke test (Apple Silicon, Metal)
     runs-on: macos-14
@@ -82,16 +100,19 @@ jobs:
           ctx.load_library("build/04-Compute/ops.metallib")
           ctx.load_library("build/05-WavePropagation/ops.metallib")
 
-          # 1D ops
+          # 1D ops — verify values, not just shapes
           x = np.ones(1024, dtype=np.float32)
           y = np.ones(1024, dtype=np.float32) * 2
-          assert np.allclose(metal.add_arrays(ctx, x, y), 3), "add_arrays failed"
-          assert np.allclose(metal.saxpy(ctx, 2.0, x, y), 4), "saxpy failed"
+          assert np.allclose(metal.add_arrays(ctx, x, y), 3.0), "add_arrays wrong values"
+          assert np.allclose(metal.saxpy(ctx, 2.0, x, y), 4.0), "saxpy wrong values"
 
-          # 2D Laplacian
+          # 2D Laplacian — shape + numerical correctness (flat field → zero interior)
           u = np.random.rand(64, 64).astype(np.float32)
           lap = metal.laplacian2d(ctx, u)
           assert lap.shape == (64, 64), "laplacian2d shape wrong"
+          flat = np.ones((64, 64), dtype=np.float32)
+          lap_flat = metal.laplacian2d(ctx, flat)
+          assert np.allclose(lap_flat[1:-1, 1:-1], 0.0, atol=1e-5), "laplacian2d nonzero on flat field"
 
           # Mandelbrot — signature: (ctx, width, height, x_min, x_max, y_min, y_max, max_iter)
           img = metal.mandelbrot(ctx, 128, 128, -2.0, 1.0, -1.5, 1.5, 256)

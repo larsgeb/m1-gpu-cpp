@@ -11,31 +11,31 @@ Usage:
 """
 
 from ._m1_gpu_ops import (
-    MetalContext,
     GpuArray,
+    MetalContext,
     add_arrays,
-    multiply_arrays,
-    saxpy,
+    diffuse_steps,
+    elastic_wave_propagate,
     laplacian2d,
     laplacian2d9p,
     mandelbrot,
-    nbody_step,
+    multiply_arrays,
     nbody_simulate,
-    diffuse_steps,
-    elastic_wave_propagate,
+    nbody_step,
+    saxpy,
 )
 
 __all__ = [
-    "MetalContext",
     "GpuArray",
+    "MetalContext",
     "add_arrays",
-    "multiply_arrays",
-    "saxpy",
+    "diffuse_steps",
+    "elastic_wave_propagate",
     "laplacian2d",
     "laplacian2d9p",
     "mandelbrot",
-    "nbody_step",
+    "multiply_arrays",
     "nbody_simulate",
-    "diffuse_steps",
-    "elastic_wave_propagate",
+    "nbody_step",
+    "saxpy",
 ]
