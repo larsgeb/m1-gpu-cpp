@@ -2,17 +2,17 @@
 """
 In-process notebook renderer for m1-gpu-cpp demos.
 
-Executes jupytext .py notebooks by running cells with exec() in the same
-Python process.  This avoids the Jupyter kernel subprocess which cannot
-reliably access the Metal GPU on macOS CI runners.
+PARENT MODE (default):
+  For each notebook, spawns a fresh Python subprocess that runs all cells with
+  exec() in-process, then writes the result as .ipynb.  Running each notebook
+  in its own subprocess isolates any Metal ↔ matplotlib crash: if a subprocess
+  exits non-zero (including SIGSEGV / exit 139), the parent catches it, writes
+  a minimal error notebook, and continues to the next notebook.  HTML rendering
+  runs in yet another subprocess (nbconvert) after all executions are done.
 
-Matplotlib figures are captured via a patched plt.show().  plt is obtained
-lazily from the exec namespace after the notebook's own import cell runs, so
-this script never imports matplotlib itself — the MPLBACKEND=Agg environment
-variable (set in CI) is sufficient to control the backend.
-
-HTML rendering is done by spawning a separate nbconvert subprocess *after* all
-GPU work is finished, keeping nbconvert's heavy imports isolated from Metal.
+SUBPROCESS MODE (--execute-single <py> <ipynb>):
+  Executes one notebook and writes the .ipynb.  Called by parent mode.
+  Never invoked directly by users.
 
 Usage:
     MPLBACKEND=Agg python scripts/render_notebooks.py <output_dir> <nb.py> [...]
@@ -31,8 +31,7 @@ from nbformat import v4
 
 
 # ---------------------------------------------------------------------------
-# Figure capture helpers  (plt accessed through exec namespace, never imported
-# at module level to avoid a matplotlib ↔ Metal conflict at initialisation)
+# Figure capture helpers
 # ---------------------------------------------------------------------------
 
 
@@ -49,20 +48,16 @@ def _capture_and_close(plt) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Core executor
+# Core executor  (runs inside the subprocess)
 # ---------------------------------------------------------------------------
 
 
-def execute_notebook(py_path: Path, out_dir: Path) -> Path:
-    """Execute a jupytext .py notebook in-process and save the result as .ipynb."""
-    print(f"Executing {py_path} ...")
+def execute_notebook(py_path: Path) -> nbformat.NotebookNode:
+    """Execute a jupytext .py notebook in-process; return the notebook object."""
+    print(f"Executing {py_path} ...", flush=True)
     nb = jupytext.read(str(py_path), fmt="py:light")
 
-    # Shared namespace — persists across all cells, just like a real kernel.
     ns: dict = {"__name__": "__main__"}
-
-    # plt is obtained from ns after the notebook's first import cell runs.
-    # cell_images accumulates captured figures for the current cell.
     plt_ref: list = []   # one-element list so the closure can rebind it
     cell_images: list[str] = []
 
@@ -74,9 +69,6 @@ def execute_notebook(py_path: Path, out_dir: Path) -> Path:
         if cell.cell_type != "code":
             continue
 
-        # Strip IPython magic lines.  jupytext stores them as `# %magic`
-        # comments; when converting to a notebook it removes the `# ` prefix,
-        # producing bare `%magic` lines that are not valid Python.
         src_lines = [
             line
             for line in cell.source.splitlines()
@@ -108,8 +100,6 @@ def execute_notebook(py_path: Path, out_dir: Path) -> Path:
         finally:
             sys.stdout = sys.__stdout__
 
-        # Once plt appears in the namespace, patch show() so subsequent cells
-        # that call plt.show() trigger figure capture instead of a GUI window.
         if not plt_ref and "plt" in ns:
             plt_ref.append(ns["plt"])
             plt_ref[0].show = _patched_show
@@ -120,7 +110,6 @@ def execute_notebook(py_path: Path, out_dir: Path) -> Path:
                 v4.new_output(output_type="stream", name="stdout", text=text)
             )
 
-        # Capture any figures not yet collected by the patched show().
         if plt_ref:
             cell_images.extend(_capture_and_close(plt_ref[0]))
 
@@ -133,35 +122,93 @@ def execute_notebook(py_path: Path, out_dir: Path) -> Path:
                 )
             )
 
-    # Save the executed notebook.
-    out_dir.mkdir(parents=True, exist_ok=True)
-    ipynb_path = out_dir / f"{py_path.stem}.ipynb"
-    with open(ipynb_path, "w") as f:
-        nbformat.write(nb, f)
-    print(f"  saved {ipynb_path}")
-    return ipynb_path
+    return nb
 
 
 # ---------------------------------------------------------------------------
-# Entry point
+# Subprocess entrypoint  (--execute-single mode)
+# ---------------------------------------------------------------------------
+
+
+def _run_single(py_path: Path, ipynb_path: Path) -> None:
+    """Execute one notebook and write the .ipynb.  Called by the parent."""
+    nb = execute_notebook(py_path)
+    ipynb_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(ipynb_path, "w") as f:
+        nbformat.write(nb, f)
+    print(f"  saved {ipynb_path}", flush=True)
+
+
+# ---------------------------------------------------------------------------
+# Entry point  (parent / orchestrator mode)
 # ---------------------------------------------------------------------------
 
 
 def main() -> None:
+    # ------------------------------------------------------------------
+    # Subprocess mode: --execute-single <py_path> <ipynb_path>
+    # ------------------------------------------------------------------
+    if len(sys.argv) == 4 and sys.argv[1] == "--execute-single":
+        _run_single(Path(sys.argv[2]), Path(sys.argv[3]))
+        return
+
     if len(sys.argv) < 3:
         print(f"Usage: {sys.argv[0]} <output_dir> <notebook.py> [...]", file=sys.stderr)
         sys.exit(1)
 
     out_dir = Path(sys.argv[1])
     notebooks = [Path(p) for p in sys.argv[2:]]
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Phase 1 — execute all notebooks in-process (Metal GPU access required).
+    # ------------------------------------------------------------------
+    # Phase 1 — execute each notebook in an isolated subprocess.
+    #   If the subprocess crashes (e.g. SIGSEGV / exit 139), we write a
+    #   minimal error notebook so that nbconvert always has something to
+    #   convert and the CI job succeeds.
+    # ------------------------------------------------------------------
     ipynb_files: list[Path] = []
-    for nb_path in notebooks:
-        ipynb_files.append(execute_notebook(nb_path, out_dir))
 
-    # Phase 2 — convert to HTML in a subprocess so that nbconvert's heavy
-    # imports (jinja2, lxml, …) are fully isolated from the Metal runtime.
+    for nb_path in notebooks:
+        ipynb_path = out_dir / f"{nb_path.stem}.ipynb"
+        print(f"\n=== Rendering {nb_path} ===", flush=True)
+
+        result = subprocess.run(
+            [
+                sys.executable, __file__,
+                "--execute-single", str(nb_path), str(ipynb_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=900,   # 15 min per notebook
+        )
+
+        # Always surface subprocess output in the CI log.
+        if result.stdout:
+            print(result.stdout, end="", flush=True)
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr, flush=True)
+
+        if result.returncode != 0:
+            msg = (
+                f"Subprocess exited with code {result.returncode}.\n\n"
+                f"stderr (last 3 000 chars):\n{result.stderr[-3000:]}"
+            )
+            print(f"  WARNING: {nb_path} — {msg[:120]}", flush=True)
+
+            # Create a fallback notebook with the error message so that
+            # nbconvert still produces an HTML page.
+            err_nb = v4.new_notebook()
+            err_nb.cells.append(
+                v4.new_markdown_cell(f"# Notebook rendering failed\n\n```\n{msg}\n```")
+            )
+            with open(ipynb_path, "w") as f:
+                nbformat.write(err_nb, f)
+
+        ipynb_files.append(ipynb_path)
+
+    # ------------------------------------------------------------------
+    # Phase 2 — convert to HTML in a subprocess (nbconvert isolated).
+    # ------------------------------------------------------------------
     for ipynb_path in ipynb_files:
         subprocess.run(
             [
