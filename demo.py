@@ -414,8 +414,9 @@ print(f"Compute library loaded on: {ctx_compute.device_name}")
 # GPU Mandelbrot — single dispatch
 width, height = 2048, 2048
 t0 = time.perf_counter()
+max_iter_vis = 1000
 mandel_gpu = metal.mandelbrot(
-    ctx_compute, width, height, x_min=-2.0, x_max=1.0, y_min=-1.5, y_max=1.5, max_iter=1000000
+    ctx_compute, width, height, x_min=-2.0, x_max=1.0, y_min=-1.5, y_max=1.5, max_iter=max_iter_vis
 )
 t_gpu = time.perf_counter() - t0
 
@@ -423,7 +424,7 @@ fig, ax = plt.subplots(figsize=(8, 8))
 ax.imshow(logn1p(mandel_gpu, n=50), cmap="inferno", extent=[-2, 1, -1.5, 1.5], origin="lower")
 ax.set_xlabel("Re(c)")
 ax.set_ylabel("Im(c)")
-ax.set_title(f"Mandelbrot Set — {width}x{height}, max_iter=1000\nGPU time: {t_gpu * 1e3:.1f} ms")
+ax.set_title(f"Mandelbrot Set — {width}x{height}, max_iter={max_iter_vis}\nGPU time: {t_gpu * 1e3:.1f} ms")
 plt.tight_layout()
 plt.show()
 
