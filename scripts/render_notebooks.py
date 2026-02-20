@@ -82,6 +82,9 @@ def execute_notebook(py_path: Path) -> nbformat.NotebookNode:
         if not src:
             continue
 
+        preview = src.splitlines()[0][:60]
+        print(f"  [cell {exec_count}] {preview}", file=sys.__stdout__, flush=True)
+
         cell_images.clear()
         stdout_buf = io.StringIO()
 

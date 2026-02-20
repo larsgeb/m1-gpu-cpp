@@ -424,7 +424,9 @@ fig, ax = plt.subplots(figsize=(8, 8))
 ax.imshow(logn1p(mandel_gpu, n=50), cmap="inferno", extent=[-2, 1, -1.5, 1.5], origin="lower")
 ax.set_xlabel("Re(c)")
 ax.set_ylabel("Im(c)")
-ax.set_title(f"Mandelbrot Set — {width}x{height}, max_iter={max_iter_vis}\nGPU time: {t_gpu * 1e3:.1f} ms")
+ax.set_title(
+    f"Mandelbrot Set — {width}x{height}, max_iter={max_iter_vis}\nGPU time: {t_gpu * 1e3:.1f} ms"
+)
 plt.tight_layout()
 plt.show()
 
