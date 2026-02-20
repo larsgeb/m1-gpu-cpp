@@ -3,41 +3,41 @@
 In-process notebook renderer for m1-gpu-cpp demos.
 
 Executes jupytext .py notebooks by running cells with exec() in the same
-Python process, avoiding Jupyter kernel subprocess issues on macOS CI where
-Metal GPU access is available to the main process but not reliably inherited
-by kernel subprocesses.
+Python process.  This avoids the Jupyter kernel subprocess which cannot
+reliably access the Metal GPU on macOS CI runners.
 
-Matplotlib figures are captured via a patched plt.show() and appended to
-cell outputs as base64-encoded PNG images.  nbconvert's HTMLExporter is then
-called as a library (no subprocess) to produce the final HTML.
+Matplotlib figures are captured via a patched plt.show().  plt is obtained
+lazily from the exec namespace after the notebook's own import cell runs, so
+this script never imports matplotlib itself — the MPLBACKEND=Agg environment
+variable (set in CI) is sufficient to control the backend.
+
+HTML rendering is done by spawning a separate nbconvert subprocess *after* all
+GPU work is finished, keeping nbconvert's heavy imports isolated from Metal.
 
 Usage:
-    python scripts/render_notebooks.py <output_dir> <notebook.py> [...]
+    MPLBACKEND=Agg python scripts/render_notebooks.py <output_dir> <nb.py> [...]
 """
 
 import base64
 import io
+import subprocess
 import sys
 import traceback
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import jupytext
 import nbformat
 from nbformat import v4
-from nbconvert.exporters import HTMLExporter
 
 
 # ---------------------------------------------------------------------------
-# Figure capture helpers
+# Figure capture helpers  (plt accessed through exec namespace, never imported
+# at module level to avoid a matplotlib ↔ Metal conflict at initialisation)
 # ---------------------------------------------------------------------------
 
 
-def _capture_and_close() -> list[str]:
-    """Save every open matplotlib figure as a base64 PNG and close all."""
+def _capture_and_close(plt) -> list[str]:
+    """Save every open matplotlib figure as base64 PNG and close all."""
     images: list[str] = []
     for fnum in plt.get_fignums():
         buf = io.BytesIO()
@@ -53,31 +53,30 @@ def _capture_and_close() -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def execute_notebook(py_path: Path, out_dir: Path) -> None:
+def execute_notebook(py_path: Path, out_dir: Path) -> Path:
+    """Execute a jupytext .py notebook in-process and save the result as .ipynb."""
     print(f"Executing {py_path} ...")
-    # Explicit fmt avoids jupytext leaking YAML front-matter into the first cell.
     nb = jupytext.read(str(py_path), fmt="py:light")
 
-    # Shared namespace — persists across cells, just like a real kernel session.
+    # Shared namespace — persists across all cells, just like a real kernel.
     ns: dict = {"__name__": "__main__"}
 
-    # Patch plt.show() so that cells which call it trigger figure capture
-    # instead of trying to open a GUI window.  Images are accumulated per-cell.
+    # plt is obtained from ns after the notebook's first import cell runs.
+    # cell_images accumulates captured figures for the current cell.
+    plt_ref: list = []   # one-element list so the closure can rebind it
     cell_images: list[str] = []
 
     def _patched_show(*_args, **_kwargs) -> None:
-        cell_images.extend(_capture_and_close())
-
-    plt.show = _patched_show
+        if plt_ref:
+            cell_images.extend(_capture_and_close(plt_ref[0]))
 
     for exec_count, cell in enumerate(nb.cells, start=1):
         if cell.cell_type != "code":
             continue
 
-        # Drop IPython magic lines.  jupytext stores them as `# %magic` comments
-        # in the .py source; when it converts to a notebook it strips the `# `
-        # prefix, so the cell source contains bare `%magic` lines which are not
-        # valid Python.  Filter both forms.
+        # Strip IPython magic lines.  jupytext stores them as `# %magic`
+        # comments; when converting to a notebook it removes the `# ` prefix,
+        # producing bare `%magic` lines that are not valid Python.
         src_lines = [
             line
             for line in cell.source.splitlines()
@@ -109,14 +108,21 @@ def execute_notebook(py_path: Path, out_dir: Path) -> None:
         finally:
             sys.stdout = sys.__stdout__
 
+        # Once plt appears in the namespace, patch show() so subsequent cells
+        # that call plt.show() trigger figure capture instead of a GUI window.
+        if not plt_ref and "plt" in ns:
+            plt_ref.append(ns["plt"])
+            plt_ref[0].show = _patched_show
+
         text = stdout_buf.getvalue()
         if text:
             cell.outputs.append(
                 v4.new_output(output_type="stream", name="stdout", text=text)
             )
 
-        # Capture any figures not yet collected by patched show().
-        cell_images.extend(_capture_and_close())
+        # Capture any figures not yet collected by the patched show().
+        if plt_ref:
+            cell_images.extend(_capture_and_close(plt_ref[0]))
 
         for img_b64 in cell_images:
             cell.outputs.append(
@@ -127,15 +133,13 @@ def execute_notebook(py_path: Path, out_dir: Path) -> None:
                 )
             )
 
-    # Render to HTML using nbconvert as a library (no subprocess).
-    exporter = HTMLExporter()
-    exporter.exclude_input_prompt = True
-    body, _ = exporter.from_notebook_node(nb)
-
+    # Save the executed notebook.
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{py_path.stem}.html"
-    out_path.write_text(body, encoding="utf-8")
-    print(f"  → {out_path}")
+    ipynb_path = out_dir / f"{py_path.stem}.ipynb"
+    with open(ipynb_path, "w") as f:
+        nbformat.write(nb, f)
+    print(f"  saved {ipynb_path}")
+    return ipynb_path
 
 
 # ---------------------------------------------------------------------------
@@ -149,8 +153,27 @@ def main() -> None:
         sys.exit(1)
 
     out_dir = Path(sys.argv[1])
-    for nb_path in (Path(p) for p in sys.argv[2:]):
-        execute_notebook(nb_path, out_dir)
+    notebooks = [Path(p) for p in sys.argv[2:]]
+
+    # Phase 1 — execute all notebooks in-process (Metal GPU access required).
+    ipynb_files: list[Path] = []
+    for nb_path in notebooks:
+        ipynb_files.append(execute_notebook(nb_path, out_dir))
+
+    # Phase 2 — convert to HTML in a subprocess so that nbconvert's heavy
+    # imports (jinja2, lxml, …) are fully isolated from the Metal runtime.
+    for ipynb_path in ipynb_files:
+        subprocess.run(
+            [
+                sys.executable, "-m", "nbconvert",
+                "--to", "html",
+                "--output-dir", str(out_dir),
+                str(ipynb_path),
+            ],
+            check=True,
+        )
+        ipynb_path.unlink()
+        print(f"  → {out_dir / ipynb_path.with_suffix('.html').name}")
 
 
 if __name__ == "__main__":
