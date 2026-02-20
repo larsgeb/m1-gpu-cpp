@@ -251,6 +251,14 @@ if(pybind11_FOUND)
         ${FOUNDATION_FRAMEWORK}
         ${METALKIT_FRAMEWORK}
     )
+    # Stage the package in build/m1_gpu_ops/ so that adding build/ to sys.path
+    # is enough for in-tree use (notebooks, CI smoke test, etc.)
+    add_custom_command(TARGET _m1_gpu_ops POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/m1_gpu_ops"
+        COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:_m1_gpu_ops>" "${CMAKE_BINARY_DIR}/m1_gpu_ops/"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/python/__init__.py" "${CMAKE_BINARY_DIR}/m1_gpu_ops/"
+        COMMENT "Staging m1_gpu_ops package in build/"
+    )
     # Install the module into the python package directory
     install(TARGETS _m1_gpu_ops DESTINATION m1_gpu_ops)
     install(FILES python/__init__.py DESTINATION m1_gpu_ops)
