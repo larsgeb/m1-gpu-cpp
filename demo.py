@@ -48,15 +48,17 @@ plt.rcParams["figure.dpi"] = 120
 # We create a `MetalContext` which connects to the default Metal GPU device, then load the pre-compiled `.metallib` shader libraries.
 
 # +
-# Context for 1D operations (add, multiply, saxpy, central_difference)
-ctx_1d = metal.MetalContext()
-ctx_1d.load_library("build/02-GeneralArrayOperations/ops.metallib")
+# Single context — load all metallibs upfront so we never create more than one
+# MTLCommandQueue (the CI paravirtual GPU crashes with ≥4 concurrent contexts).
+ctx = metal.MetalContext()
+ctx.load_library("build/02-GeneralArrayOperations/ops.metallib")
+ctx.load_library("build/03-2DKernels/ops.metallib")
+ctx.load_library("build/04-Compute/ops.metallib")
 
-# Context for 2D operations (laplacian2d, laplacian2d9p, quadratic2d)
-ctx_2d = metal.MetalContext()
-ctx_2d.load_library("build/03-2DKernels/ops.metallib")
+# Aliases used in the cells below (kept for readability of each section)
+ctx_1d = ctx_2d = ctx_compute = ctx_diffuse = ctx
 
-print(f"GPU device: {ctx_1d.device_name}")
+print(f"GPU device: {ctx.device_name}")
 # -
 
 # ## 2. 1D Array Operations — Correctness
@@ -397,9 +399,7 @@ def logstar(x, base=np.e, threshold=1.0):
     return k
 
 
-# Load compute-heavy kernels
-ctx_compute = metal.MetalContext()
-ctx_compute.load_library("build/04-Compute/ops.metallib")
+# ctx_compute already aliased to ctx above.
 print(f"Compute library loaded on: {ctx_compute.device_name}")
 
 # GPU Mandelbrot — single dispatch
@@ -684,10 +684,7 @@ plt.show()
 # - Buffer allocation/deallocation
 
 # +
-# Need both 1D (saxpy) and 2D (laplacian2d) kernels for diffuse_steps
-ctx_diffuse = metal.MetalContext()
-ctx_diffuse.load_library("build/02-GeneralArrayOperations/ops.metallib")
-ctx_diffuse.load_library("build/03-2DKernels/ops.metallib")
+# ctx_diffuse already aliased to ctx above.
 
 
 def diffuse_numpy(field, dt, n_steps):
