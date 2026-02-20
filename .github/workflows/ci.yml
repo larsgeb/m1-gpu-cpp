@@ -174,10 +174,7 @@ jobs:
         run: |
           python3 -m venv .venv
           .venv/bin/pip install --quiet \
-            numpy pybind11 matplotlib jupytext nbconvert ipykernel
-          # Register this venv as the "python3" Jupyter kernel so nbconvert
-          # executes notebooks with the same Python that has _m1_gpu_ops built in.
-          .venv/bin/python3 -m ipykernel install --user --name python3
+            numpy pybind11 matplotlib jupytext nbconvert
 
       - name: Build with pybind11
         run: |
@@ -186,19 +183,12 @@ jobs:
           cmake --build build --parallel
 
       - name: Render notebooks to HTML
+        # Run cells with exec() in-process — avoids the Jupyter kernel subprocess
+        # which cannot reliably access the Metal GPU on macOS CI runners.
+        # plt.show() is patched to capture figures as base64 PNG cell outputs.
         env:
-          MPLBACKEND: Agg   # non-interactive backend — no display needed
-        run: |
-          # Convert jupytext light .py → .ipynb, execute, render to HTML.
-          # Working directory is repo root so "build/" relative paths resolve.
-          .venv/bin/jupytext --to notebook demo.py
-          .venv/bin/jupytext --to notebook wave_demo.py
-          mkdir -p _site
-          .venv/bin/jupyter nbconvert \
-            --to html --execute \
-            --ExecutePreprocessor.timeout=300 \
-            --output-dir _site \
-            demo.ipynb wave_demo.ipynb
+          MPLBACKEND: Agg
+        run: .venv/bin/python3 scripts/render_notebooks.py _site demo.py wave_demo.py
 
       - name: Create index page
         run: |
