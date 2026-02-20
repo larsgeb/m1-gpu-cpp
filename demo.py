@@ -35,6 +35,10 @@ import time
 
 import _m1_gpu_ops as metal
 
+# Reduce benchmark sizes on CI (GitHub Actions paravirtual GPU has limited Metal
+# memory: >40 MB Metal buffers cause SIGSEGV).  Full sizes run locally.
+_ci = bool(os.getenv("CI"))
+
 # %matplotlib inline
 plt.rcParams["figure.dpi"] = 120
 # -
@@ -108,16 +112,9 @@ def benchmark(func, *args, repeats=100, warmup=15):
     return np.median(times), np.std(times)
 
 
-sizes = [
-    1,
-    10,
-    100,
-    1_000,
-    10_000,
-    100_000,
-    1_000_000,
-    10_000_000,
-]
+sizes = [1, 10, 100, 1_000, 10_000, 100_000, 1_000_000]
+if not _ci:
+    sizes += [10_000_000]
 ops = {
     "add": {
         "gpu": lambda x, y: metal.add_arrays(ctx_1d, x, y),
@@ -231,15 +228,9 @@ def numpy_laplacian5(X):
     return result
 
 
-grid_sizes = [
-    (64, 64),
-    (128, 128),
-    (256, 256),
-    (512, 512),
-    (1024, 1024),
-    (2048, 2048),
-    (4000, 4000),
-]
+grid_sizes = [(64, 64), (128, 128), (256, 256), (512, 512), (1024, 1024)]
+if not _ci:
+    grid_sizes += [(2048, 2048), (4000, 4000)]
 
 gpu_times = []
 numpy_times = []
