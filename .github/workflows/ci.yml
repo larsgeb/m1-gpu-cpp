@@ -93,8 +93,8 @@ jobs:
           lap = metal.laplacian2d(ctx, u)
           assert lap.shape == (64, 64), "laplacian2d shape wrong"
 
-          # Mandelbrot
-          img = metal.mandelbrot(ctx, -2.0, 1.0, -1.5, 1.5, 128, 128, 256)
+          # Mandelbrot — signature: (ctx, width, height, x_min, x_max, y_min, y_max, max_iter)
+          img = metal.mandelbrot(ctx, 128, 128, -2.0, 1.0, -1.5, 1.5, 256)
           assert img.shape == (128, 128), "mandelbrot shape wrong"
 
           # N-body (one step)
