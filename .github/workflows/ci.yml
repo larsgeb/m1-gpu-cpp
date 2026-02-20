@@ -97,12 +97,12 @@ jobs:
           img = metal.mandelbrot(ctx, 128, 128, -2.0, 1.0, -1.5, 1.5, 256)
           assert img.shape == (128, 128), "mandelbrot shape wrong"
 
-          # N-body (one step)
-          pos = np.random.rand(64, 2).astype(np.float32)
-          vel = np.zeros((64, 2), dtype=np.float32)
-          mass = np.ones(64, dtype=np.float32)
-          pos2, vel2 = metal.nbody_step(ctx, pos, vel, mass, dt=0.01, G=1.0, softening=0.1)
-          assert pos2.shape == pos.shape, "nbody_step shape wrong"
+          # N-body (one step) — pos_mass: (N,4) [x,y,z,mass], velocities: (N,4)
+          pos_mass = np.random.rand(64, 4).astype(np.float32)
+          pos_mass[:, 3] = 1.0  # mass column
+          vel = np.zeros((64, 4), dtype=np.float32)
+          pos2, vel2 = metal.nbody_step(ctx, pos_mass, vel, dt=0.01, softening=0.1)
+          assert pos2.shape == (64, 4), f"nbody_step shape wrong: {pos2.shape}"
 
           # Elastic wave (small grid, few steps)
           nx, nz = 50, 50
