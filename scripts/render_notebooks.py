@@ -55,7 +55,8 @@ def _capture_and_close() -> list[str]:
 
 def execute_notebook(py_path: Path, out_dir: Path) -> None:
     print(f"Executing {py_path} ...")
-    nb = jupytext.read(str(py_path))
+    # Explicit fmt avoids jupytext leaking YAML front-matter into the first cell.
+    nb = jupytext.read(str(py_path), fmt="py:light")
 
     # Shared namespace — persists across cells, just like a real kernel session.
     ns: dict = {"__name__": "__main__"}
@@ -73,11 +74,14 @@ def execute_notebook(py_path: Path, out_dir: Path) -> None:
         if cell.cell_type != "code":
             continue
 
-        # Drop IPython magic lines that jupytext stores as comments.
+        # Drop IPython magic lines.  jupytext stores them as `# %magic` comments
+        # in the .py source; when it converts to a notebook it strips the `# `
+        # prefix, so the cell source contains bare `%magic` lines which are not
+        # valid Python.  Filter both forms.
         src_lines = [
             line
             for line in cell.source.splitlines()
-            if not line.lstrip().startswith(("# %", "# %%"))
+            if not line.lstrip().startswith(("# %", "# %%", "%", "%%"))
         ]
         src = "\n".join(src_lines).strip()
 
