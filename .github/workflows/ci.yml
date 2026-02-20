@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # every Monday at 06:00 UTC
 
 jobs:
   build-and-test:
@@ -141,3 +143,117 @@ jobs:
 
           print("All smoke tests passed.")
           EOF
+
+  pages:
+    name: Render notebooks → GitHub Pages
+    runs-on: macos-14
+    needs: build-and-test
+    # Only publish on main branch pushes and scheduled runs — not on PRs.
+    if: github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: brew install cmake libomp
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+
+      - name: Bootstrap Xcode
+        run: sudo xcodebuild -runFirstLaunch
+
+      - name: Set up Python venv
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet \
+            numpy pybind11 matplotlib jupytext nbconvert ipykernel
+          # Register this venv as the "python3" Jupyter kernel so nbconvert
+          # executes notebooks with the same Python that has _m1_gpu_ops built in.
+          .venv/bin/python3 -m ipykernel install --user --name python3
+
+      - name: Build with pybind11
+        run: |
+          PYBIND11_DIR=$(.venv/bin/python3 -c "import pybind11; print(pybind11.get_cmake_dir())")
+          cmake -B build -Dpybind11_DIR="$PYBIND11_DIR"
+          cmake --build build --parallel
+
+      - name: Render notebooks to HTML
+        env:
+          MPLBACKEND: Agg   # non-interactive backend — no display needed
+        run: |
+          # Convert jupytext light .py → .ipynb, execute, render to HTML.
+          # Working directory is repo root so "build/" relative paths resolve.
+          .venv/bin/jupytext --to notebook demo.py
+          .venv/bin/jupytext --to notebook wave_demo.py
+          mkdir -p _site
+          .venv/bin/jupyter nbconvert \
+            --to html --execute \
+            --ExecutePreprocessor.timeout=300 \
+            --output-dir _site \
+            demo.ipynb wave_demo.ipynb
+
+      - name: Create index page
+        run: |
+          .venv/bin/python3 - << 'PYEOF'
+          import datetime, pathlib
+          date = datetime.date.today().isoformat()
+          html = """<!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>m1-gpu-cpp demos</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                     max-width: 680px; margin: 48px auto; padding: 0 24px;
+                     color: #24292e; line-height: 1.6; }
+              h1   { font-size: 1.6em; border-bottom: 1px solid #e1e4e8; padding-bottom: 10px; }
+              .card { border: 1px solid #e1e4e8; border-radius: 6px;
+                      padding: 16px 20px; margin: 12px 0; }
+              .card h2 { font-size: 1.1em; margin: 0 0 6px; }
+              .card h2 a { color: #0366d6; text-decoration: none; }
+              .card h2 a:hover { text-decoration: underline; }
+              .card p { margin: 0; color: #586069; font-size: 0.9em; }
+              footer { margin-top: 32px; color: #586069; font-size: 0.85em; }
+            </style>
+          </head>
+          <body>
+            <h1>m1-gpu-cpp &mdash; Metal GPU Computing Demos</h1>
+            <p>GPU-accelerated scientific computing on Apple Silicon using Metal Shading
+               Language, exposed to Python via pybind11.</p>
+            <div class="card">
+              <h2><a href="demo.html">General operations demo</a></h2>
+              <p>1D/2D array ops &middot; Laplacian stencils &middot; Mandelbrot
+                 &middot; N-body &middot; heat diffusion</p>
+            </div>
+            <div class="card">
+              <h2><a href="wave_demo.html">Elastic wave propagation demo</a></h2>
+              <p>2D elastic FD (Virieux staggered-grid) &middot; seismograms
+                 &middot; wavefield snapshots</p>
+            </div>
+            <footer>
+              Rendered DATE_PLACEHOLDER by CI &middot;
+              <a href="https://github.com/larsgeb/m1-gpu-cpp">source on GitHub</a>
+            </footer>
+          </body>
+          </html>
+          """.replace("DATE_PLACEHOLDER", date)
+          pathlib.Path("_site/index.html").write_text(html)
+          PYEOF
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
