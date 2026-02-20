@@ -24,7 +24,18 @@ int main()
         std::cerr << "FAIL: No Metal device found." << std::endl;
         return 1;
     }
-    std::cout << "Running on " << device->name()->utf8String() << std::endl;
+    std::string deviceName = device->name()->utf8String();
+    std::cout << "Running on " << deviceName << std::endl;
+
+    // MetalAdder uses newDefaultLibrary() which the Apple Paravirtual device
+    // cannot load correctly — results are silently all-zero regardless of size.
+    // Tests 02 and 03 load their metallib explicitly and run fine on the VM.
+    if (deviceName.find("Paravirtual") != std::string::npos)
+    {
+        std::cout << "SKIP: newDefaultLibrary() not supported on Paravirtual device." << std::endl;
+        device->release();
+        return 77; // CTest SKIP_RETURN_CODE
+    }
 
     MetalAdder *adder = new MetalAdder(device);
 

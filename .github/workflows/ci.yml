@@ -55,7 +55,7 @@ jobs:
         run: uvx ruff format --check python/ demo.py wave_demo.py
 
       - name: Ty type check
-        run: uvx ty check python/
+        run: uvx --with numpy ty check python/
 
   python-bindings:
     name: Python bindings smoke test (Apple Silicon, Metal)
