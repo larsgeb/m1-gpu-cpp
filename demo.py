@@ -709,8 +709,10 @@ def diffuse_python_loop(ctx, field, dt, n_steps):
 
 
 # Benchmark: diffuse_steps (C++ loop) vs Python-loop GPU vs NumPy
+# The Python-loop variant does N Python→GPU round-trips per iteration; CI
+# crashes (GPU timeout) at 500 steps, so cap to 50 on the paravirtual device.
 grid_size = 512
-n_steps_list = [10, 50, 100, 500]
+n_steps_list = [10, 50] if _ci else [10, 50, 100, 500]
 dt = 0.1
 
 gpu_fused = []
